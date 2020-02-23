@@ -5,7 +5,7 @@
 # All rights reserved.
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 #
-# Desc:   Batch script to download and setup Energi v3 on Linux. The
+# Desc:   Batch script to download and setup Energi3 on Linux. The
 #         script will upgrade an existing installation. If v2 is
 #         installed on the VPS, the script can be used to auto migrate
 #         from v2 to v3.
@@ -16,7 +16,7 @@
 : '
 # Run the script to get started:
 ```
-bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3/master/scripts/linux/energi3-linux-installer.sh)" ; source ~/.bashrc
+bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/energi3-linux-installer.sh)" ; source ~/.bashrc
 ```
 '
 ######################################################################
@@ -46,7 +46,7 @@ TP_URL="${BASE_URL}/thirdparty"
 DOC_URL="https://energi.gitbook.io"
 #GITURL="https://raw.githubusercontent.com/energicryptocurrency/energi3"
 
-# Energi v3 Bootstrap Settings
+# Energi3 Bootstrap Settings
 #export BLK_HASH=gsaqiry3h1ho3nh
 #export BOOTSTRAP_URL="https://www.dropbox.com/s/%BLK_HASH%/energi3bootstrap.tar.gz"
 
@@ -133,18 +133,18 @@ _add_nrgstaker () {
   
   if [ "${CHKPASSWD}" == "" ]
   then
-    echo "You can select the computer to generate a ramdom password and let you know what"
-    echo "that is. Or you can select one for yourself that someone can easily guess."
-    REPLY=''
-    read -p "Do you want to select your own password [y]/n: "
-    REPLY=${REPLY,,} # tolower
-    if [[ "${REPLY}" = "y" ]] || [[ -z "${REPLY}" ]]
-    then
-      echo "You will be prompted to enter a secure password"
-      echo
-      ${SUDO} adduser --gecos "Energi Staking Account" --quiet ${USRNAME}
-      
-    else
+#    echo "You can select the computer to generate a ramdom password and let you know what"
+#    echo "that is. Or you can select one for yourself that someone can easily guess."
+#    REPLY=''
+#    read -p "Do you want to select your own password [y]/n: "
+#    REPLY=${REPLY,,} # tolower
+#    if [[ "${REPLY}" = "y" ]] || [[ -z "${REPLY}" ]]
+#    then
+#      echo "You will be prompted to enter a secure password"
+#      echo
+#      ${SUDO} adduser --gecos "Energi Staking Account" --quiet ${USRNAME}
+#      
+#    else
       if [ ! -x "$( command -v  pwgen )" ]
       then
         echo "Installing missing package to generate random password"
@@ -152,25 +152,29 @@ _add_nrgstaker () {
       fi
       
       USRPASSWD=`pwgen 8 1`
+      clear
       echo
-      echo "Write down the following before continuing:"
-      echo "  Username: ${BLUE}${USRNAME}${NC}"
-      echo "  Password: ${BLUE}${USRPASSWD}${NC}"
+#      echo "Write down the following before continuing:"
+      echo "The following username / password is needed for future login."
+      echo "Please write down the following before continuing!!!"
+      echo "  Username: ${GREEN}${USRNAME}${NC}"
+      echo "  Password: ${GREEN}${USRPASSWD}${NC}"
       echo
       REPLY=''
       read -p "Did you write down the username and password? y/[n]: "
       REPLY=${REPLY,,} # tolower
       if [[ "${REPLY}" == "n" ]] || [[ -z "${REPLY}" ]]
       then
-        echo "Please write down the username and password before continuing"
-        echo "Exiting script!"
+        echo
+        echo "Exiting script without creating the user account!!!"
+        echo
         exit 0
       fi
       
       ${SUDO} adduser --gecos "Energi Staking Account" --disabled-password --quiet ${USRNAME}
       echo -e "${USRPASSWD}\n${USRPASSWD}" | ${SUDO} passwd ${USRNAME} 2>/dev/null
         
-    fi
+#    fi
 
     ${SUDO} usermod -aG sudo ${USRNAME}
     touch /home/${USRNAME}/.sudo_as_admin_successful
@@ -189,13 +193,17 @@ _add_nrgstaker () {
       echo "export PATH=\${PATH}:\${HOME}/energi3/bin" >> "${USRHOME}/.bashrc"
       echo
       echo "  .bashrc updated with PATH variable"
+      if [[ $EUID != 0 ]]
+      then
+        source ${USRHOME}/.bashrc
+      fi
     else
       echo "  .bashrc up to date. Nothing to add"
     fi
     echo
     echo "${GREEN}*** User ${USRNAME} created and added to sudoer group                       ***${NC}"
     echo "${GREEN}*** User ${USRNAME} will be used to install the software and configurations ***${NC}"
-    sleep 3
+    sleep 0.3
     
   fi
   
@@ -257,85 +265,85 @@ _check_install () {
           
           echo "${GREEN}Installed${NC}"
           echo
-          echo "You have two options to install Energi v3:"
-          echo "  1) Use the same user as used in Energi v2"
-          echo "  2) Create a separate installation with a new installation"
-          echo
-          echo "For both options you can choose to manually migrate the wallet or automatically"
-          echo "migrate all funds from Energi v2 to Energi v3."
-          echo
-          
-          isMigrate=""
-          read -p "Do you want to migrate from Energi v2 to v3 (y/[n]): " isMigrate
-          isMigrate=${isMigrate,,}    # tolower
-          
-          if [ "${isMigrate}" = "y" ]
-          then
-            # If there is multiple user accounts with energi.conf have user choose one
-            I=1
-            for U in `cat ${CHKV2USRTMP}`
-            do
-              # Create an array of USR and present for selection
-              USR[${I}]=${U}
-              echo "${I}: ${USR[${I}]}"
-              ((I=I+1))
-              if [ ${I} = ${V2USRCOUNT} ]
-              then
-                break
-              fi
-            done
-            
-            REPLY=""
-            read -p "${BLUE}Select with user name to migrate:${NC} " REPLY
-            
-            if [ ${REPLY} -le ${V2USRCOUNT} ]
-            then
-              # Based on selection, assign from array of USR
-              USRNAME="${USR[${REPLY}]}"
-              
-              if [[ "${USRNAME}" -ne "${RUNAS}" ]]
-              then
-                clear
-                echo "You have to run the script as root or ${USRNAME}"
-                echo "Login as ${USRNAME} and run the script again"
-                exit 0
-              fi
-              
-              export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
-              export ENERGI3_HOME=${USRHOME}/energi3
-              
-              if [ -f ${ENERGI3_HOME}/etc/migrated_to_v3.log ]
-              then
-                echo "${RED}*** Energi v2 for user ${USRNAME} has already been migrated to Energi v3 ***${NC}"
-                echo "${RED}***                           Exiting Installer                          ***${NC}"
-                exit 0
-                
-              else
-                ###### disabling migration function for migration
-                #INSTALLTYPE=migrate
-                INSTALLTYPE=new
-                echo "Energi will be migrated from v2 to v3 as ${GREEN}${USRNAME}${NC}"
-                
-              fi
-              
-            else
-              echo "${RED}Invalid entry:${NC} Enter a number less than or equal to ${V3USRCOUNT}"
-              _check_install
-              
-            fi
-            
-          else
+#          echo "You have two options to install Energi3:"
+#          echo "  1) Use the same user as used in Energi v2"
+#          echo "  2) Create a separate installation with a new installation"
+#          echo
+#          echo "For both options you can choose to manually migrate the wallet or automatically"
+#          echo "migrate all funds from Energi v2 to Energi3."
+#          echo
+#          
+#          isMigrate=""
+#          read -p "Do you want to migrate from Energi v2 to v3 (y/[n]): " isMigrate
+#          isMigrate=${isMigrate,,}    # tolower
+#          
+#          if [ "${isMigrate}" = "y" ]
+#          then
+#            # If there is multiple user accounts with energi.conf have user choose one
+#            I=1
+#            for U in `cat ${CHKV2USRTMP}`
+#            do
+#              # Create an array of USR and present for selection
+#              USR[${I}]=${U}
+#              echo "${I}: ${USR[${I}]}"
+#              ((I=I+1))
+#              if [ ${I} = ${V2USRCOUNT} ]
+#              then
+#                break
+#              fi
+#            done
+#            
+#            REPLY=""
+#            read -p "${BLUE}Select with user name to migrate:${NC} " REPLY
+#            
+#            if [ ${REPLY} -le ${V2USRCOUNT} ]
+#            then
+#              # Based on selection, assign from array of USR
+#              USRNAME="${USR[${REPLY}]}"
+#              
+#              if [[ "${USRNAME}" -ne "${RUNAS}" ]]
+#              then
+#                clear
+#                echo "You have to run the script as root or ${USRNAME}"
+#                echo "Login as ${USRNAME} and run the script again"
+#                exit 0
+#              fi
+#              
+#              export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
+#              export ENERGI3_HOME=${USRHOME}/energi3
+#              
+#              if [ -f ${ENERGI3_HOME}/etc/migrated_to_v3.log ]
+#              then
+#                echo "${RED}*** Energi v2 for user ${USRNAME} has already been migrated to Energi3 ***${NC}"
+#                echo "${RED}***                           Exiting Installer                          ***${NC}"
+#                exit 0
+#                
+#              else
+#                ###### disabling migration function for migration
+#                #INSTALLTYPE=migrate
+#                INSTALLTYPE=new
+#                echo "Energi will be migrated from v2 to v3 as ${GREEN}${USRNAME}${NC}"
+#                
+#              fi
+#              
+#            else
+#              echo "${RED}Invalid entry:${NC} Enter a number less than or equal to ${V3USRCOUNT}"
+#              _check_install
+#              
+#            fi
+#            
+#          else
             USRNAME=nrgstaker
             INSTALLTYPE=new
-            echo "Installing new version of Energi v3 as ${USRNAME}"
-            echo "Existing Energi v2 needs to be manually migrated to Energi v3"
+            echo "Installing new version of Energi3 as ${USRNAME}"
+#            echo "Existing Energi v2 needs to be manually migrated to Energi3"
             
             _add_nrgstaker
             
             export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
             export ENERGI3_HOME=${USRHOME}/energi3
             
-          fi
+#          fi
           ;;    
 
       esac
@@ -347,14 +355,14 @@ _check_install () {
     1)
       
       # Upgrade existing version of Energi 3:
-      #   * One instance of Energi v3 is already installed
+      #   * One instance of Energi3 is already installed
       #   * energi3.ipc file exists
       #   * Version on computer is older than version in Github
       
       export USRNAME=`cat ${CHKV3USRTMP}`
       INSTALLTYPE=upgrade
-      echo "The script will latest version available in Github and upgrade installed"
-      echo "Energi v3 if necessary as ${BLUE}${USRNAME}${NC}"
+      echo "The script will upgrade to the latest version of energi3 from Github"
+      echo "if available as user: ${GREEN}${USRNAME}${NC}"
       
       export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
       export ENERGI3_HOME=${USRHOME}/energi3
@@ -363,8 +371,8 @@ _check_install () {
   
     *)
       
-      # Upgrade existing version of Energi 3:
-      #   * More than one instance of Energi v3 is already installed
+      # Upgrade existing version of Energi3:
+      #   * More than one instance of Energi3 is already installed
       #   * energi3.ipc file exists
       #   * Version on computer is older than version in Github
       #   * User selects which instance to upgrade
@@ -382,7 +390,7 @@ _check_install () {
         fi
       done
       REPLY=""
-      read -p "${BLUE}Select with user name to upgrade:${NC} " REPLY
+      read -p "Select with user name to upgrade: " REPLY
       
       if [ ${REPLY} -le ${V3USRCOUNT} ]
       then
@@ -393,6 +401,7 @@ _check_install () {
           clear
           echo "You have to run the script as root or ${USRNAME}"
           echo "Login as ${USRNAME} and run the script again"
+          echo "Exiting script..."
           exit 0
         fi
               
@@ -407,7 +416,7 @@ _check_install () {
         _check_install
       fi
       
-      echo "Upgrading Energi v3 as ${USRNAME}"
+      echo "Upgrading Energi3 as ${USRNAME}"
       ;;
   
   esac
@@ -421,21 +430,21 @@ _setup_appdir () {
 
   # Setup application directories if does not exist
   
-  CHK_HOME='n'
-  while [ ${CHK_HOME} != "y" ]
-  do
-    echo "Enter Full Path of where you wall to install Energi3 Node Software"
-    read -r -p "(${ENERGI3_HOME}): " TMP_HOME
-    if [ "${TMP_HOME}" != "" ]
-    then
-      export ENERGI3_HOME=${TMP_HOME}
-    fi
-    read -n 1 -p "Is Install path correct: ${ENERGI3_HOME} (y/N): " CHK_HOME
-    echo
-    CHK_HOME=${CHK_HOME,,}    # tolower
-  done
+#  CHK_HOME='n'
+#  while [ ${CHK_HOME} != "y" ]
+#  do
+#    echo "Enter Full Path of where you wall to install Energi3 Node Software"
+#    read -r -p "(${ENERGI3_HOME}): " TMP_HOME
+#    if [ "${TMP_HOME}" != "" ]
+#    then
+#      export ENERGI3_HOME=${TMP_HOME}
+#    fi
+#    read -n 1 -p "Is Install path correct: ${ENERGI3_HOME} (y/N): " CHK_HOME
+#    echo
+#    CHK_HOME=${CHK_HOME,,}    # tolower
+#  done
   
-  echo "Energi v3 will be installed in ${ENERGI3_HOME}"
+  echo "Energi3 will be installed in ${ENERGI3_HOME}"
   sleep 0.5
   # Set application directories
   export BIN_DIR=${ENERGI3_HOME}/bin
@@ -447,25 +456,26 @@ _setup_appdir () {
   # Create directories if it does not exist
   if [ ! -d ${BIN_DIR} ]
   then
-    echo "Creating directory: ${BIN_DIR}"
+    echo "    Creating directory: ${BIN_DIR}"
     mkdir -p ${BIN_DIR}
   fi
   if [ ! -d ${ETC_DIR} ]
   then
-    echo "Creating directory: ${ETC_DIR}"
+    echo "    Creating directory: ${ETC_DIR}"
     mkdir -p ${ETC_DIR}
   fi
   if [ ! -d ${JS_DIR} ]
   then
-    echo "Creating directory: ${JS_DIR}"
+    echo "    Creating directory: ${JS_DIR}"
     mkdir -p ${JS_DIR}
   fi
   if [ ! -d ${TMP_DIR} ]
   then
-    echo "Creating directory: ${TMP_DIR}"
+    echo "    Creating directory: ${TMP_DIR}"
     mkdir -p ${TMP_DIR}
   fi
   
+  echo
   echo "Changing ownership of ${ENERGI3_HOME} to ${USRNAME}"
   if [[ ${EUID} = 0 ]]
   then
@@ -482,8 +492,8 @@ _check_ismainnet () {
   if [[ "${INSTALLTYPE}" == "new" ]]
   then
     isMainnet=y
-    read -n 1 -p "Are you setting up Mainnet ([y]/n): " isMainnet
-    isMainnet=${isMainnet,,}    # tolower
+#    read -n 1 -p "Are you setting up Mainnet ([y]/n): " isMainnet
+#    isMainnet=${isMainnet,,}    # tolower
 
     if [[ "${isMainnet}" == 'y' ]] || [[ -z "${isMainnet}" ]]
     then
@@ -530,6 +540,7 @@ _check_ismainnet () {
       echo "The application will be setup for Testnet"
     fi
   fi
+  echo
   sleep 0.3
 }
 
@@ -540,20 +551,21 @@ _install_apt () {
   
   if [ ! -x "$( command -v aria2c )" ] || [ ! -x "$( command -v unattended-upgrade )" ] || [ ! -x "$( command -v ntpdate )" ] || [ ! -x "$( command -v google-authenticator )" ] || [ ! -x "$( command -v php )" ] || [ ! -x "$( command -v jq )" ]  || [ ! -x "$( command -v qrencode )" ]
   then
+    echo
     echo "Updating linux first."
-    echo "Running apt-get update."
+    echo "    Running apt-get update."
     sleep 1
     ${SUDO} apt-get update -yq 2> /dev/null
-    echo "Running apt-get upgrade."
+    echo "    Running apt-get upgrade."
     sleep 1
     ${SUDO} apt-get upgrade -yq 2> /dev/null
-    echo "Running apt-get dist-upgrade."
+    echo "    Running apt-get dist-upgrade."
     sleep 1
     ${SUDO} apt-get -yq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade 2> /dev/null
 
     if [ ! -x "$( command -v unattended-upgrade )" ]
     then
-      echo "Running apt-get install unattended-upgrades php ufw."
+      echo "    Running apt-get install unattended-upgrades php ufw."
       sleep 1
       ${SUDO} apt-get install -yq unattended-upgrades php ufw 2> /dev/null
       
@@ -576,6 +588,7 @@ UBUNTU_SECURITY_PACKAGES
   # Install missing programs if needed.
   if [ ! -x "$( command -v aria2c )" ]
   then
+    echo "    Installing missing programs..."
     ${SUDO} apt-get install -yq \
       curl \
       lsof \
@@ -611,14 +624,14 @@ UBUNTU_SECURITY_PACKAGES
   
   if [ ! -x "$( command -v jq )" ]
   then
-    echo "Installing jq"
+    echo "    Installing jq"
     ${SUDO} apt-get install -yq jq 2> /dev/null
   fi
-  echo "Installing screen and nodejs"
+  echo "    Installing screen and nodejs"
   ${SUDO} apt-get install -yq screen 2> /dev/null
   ${SUDO} apt-get install -yq nodejs 2> /dev/null
   
-  echo "Removing apt files not required"
+  echo "    Removing apt files not required"
   ${SUDO} apt autoremove -y 2> /dev/null
   
 }
@@ -653,7 +666,7 @@ _add_systemd () {
 
   if [ ! -f /lib/systemd/system/energi3.service ]
   then
-    echo "Setting up systemctl for energi3"
+    echo "Setting up systemctl to automatically start energi3 after reboot..."
     sleep 0.3
     
     cat << SYSTEMD_CONF | ${SUDO} tee /lib/systemd/system/energi3.service >/dev/null
@@ -675,8 +688,8 @@ WorkingDirectory=${USRHOME}
 WantedBy=multi-user.target
 SYSTEMD_CONF
 
-    echo "Enabling energi3.service"
-    systemctl enable energi3.service
+    echo "    Enabling energi3 service"
+    systemctl enable energi3
 
   fi
 }
@@ -781,7 +794,7 @@ _upgrade_energi3 () {
     echo "Installing newer version ${GIT_VERSION} from Github"
     _install_energi3
   else
-    echo "Latest version of Energi v3 is installed: ${INSTALL_VERSION}"
+    echo "Latest version of Energi3 is installed: ${INSTALL_VERSION}"
     echo "Nothing to install"
     sleep 0.3
   fi
@@ -834,9 +847,11 @@ _restrict_logins() {
   fi
   echo
   echo ${BOTH_LISTS}
-  REPLY=''
-  read -p "Make it so only the above list of users can login via SSH ([y]/n)?: " -r
-  REPLY=${REPLY,,} # tolower
+  REPLY='y'
+#  read -p "Make it so only the above list of users can login via SSH ([y]/n)?: " -r
+#  REPLY=${REPLY,,} # tolower
+  echo "Only the above list of users can login via SSH"
+  sleep 0.3
   if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
   then
     if [[ $( grep -cE '^AllowUsers' /etc/ssh/sshd_config ) -eq 0 ]]
@@ -879,7 +894,7 @@ _secure_host() {
     ${SUDO} ufw allow ${FWPORT}/udp
   fi
   ${SUDO} ufw logging on
-  ${SUDO} ufw enable
+  ${SUDO} ufw --force enable
   
 }
 
@@ -1137,7 +1152,7 @@ _add_swap () {
 
 _copy_keystore() {
 
-  # Copy Energi v3 keystore file to computer
+  # Copy Energi3 keystore file to computer
 
   # Download ffsend if needed
     # Install ffsend and jq as well.
@@ -1169,7 +1184,7 @@ _copy_keystore() {
   echo "https://en.wikipedia.org/wiki/Firefox_Send"
   sleep .3
   echo
-  echo "Shutdown your desktop Energi v3 node and upload the keystore file to"
+  echo "Shutdown your desktop Energi3 node and upload the keystore file to"
   echo "https://send.firefox.com/"
   echo "Paste in the URL to your keystore file below:"
   sleep .3
@@ -1284,7 +1299,7 @@ _store_keystore_pw () {
   
   if [[ "${NODE_UNLOCKED}" != 'true' ]]
   then
-    echo "Energi v3 Node is not running.  Cannot update passwords"
+    echo "Energi3 Node is not running.  Cannot update passwords"
     echo "Continuing..."
     sleep 3
     return
@@ -1369,12 +1384,12 @@ _stop_energi3 () {
     
   if [ ! -z "${ENERGI3PID}" ]
   then
-    echo "Stopping Energi v3"
+    echo "Stopping Energi3"
     kill ${ENERGI3PID}
     sleep 3
   else
     echo
-    echo "Energi v3 is not running on this server"
+    echo "Energi3 is not running on this server"
     sleep 3
   fi
   
@@ -1433,13 +1448,61 @@ _stop_energi2 () {
   ENERGI2PID=`ps -ef | grep energid | grep -v "grep energid" | grep -v "color=auto" | awk '{print $2}' `
   if [ ! -z "${ENERGI2PID}" ]
   then
-    echo "Stopping Energi v2"
-    energi-cli ${APPARG} stop
-    sleep 3
+    if [ -f /etc/systemd/system/enrg*.service ]
+    then
+      for I in `find /etc/systemd/system -name "enrg*.service" -type f`
+      do
+        V2SYSTEMCTL=`basename ${I} | awk -F. '{print $1}'`
+        echo "Stopping energi v2 for: ${V2SYSTEMCTL}"
+        ${SUDO} systemctl stop ${V2SYSTEMCTL}
+        ${SUDO} systemctl disable ${V2SYSTEMCTL}
+      done
+    else
+      if [[ ! $EUID = 0 ]]
+      then
+        echo "Stopping Energi v2"
+        energi-cli ${APPARG} stop
+      else
+        echo "Stopping Energi v2"
+        ENERGI2PID=`ps -ef | grep energid | grep -v "grep energid" | grep -v "color=auto" | awk '{print $2}'`
+        kill ${ENERGI2PID}
+      fi
+    fi
+    sleep 1
   else
     echo "Energi v2 is not running on this server"
-    sleep 3
+    sleep 1
   fi
+}
+
+_stop_mnmon () {
+  
+  # Check if mnmon is running. If so, stop and remove
+  if [ -f /etc/systemd/system/mnmon.service ]
+  then
+    echo "Stopping mnmon service for Energi v2."
+    ${SUDO} systemctl stop mnmon
+    ${SUDO} systemctl disable mnmon
+  fi
+  
+  if [ -f /etc/systemd/system/mnmon.service ]
+  then
+    echo "Saving mnmon.service"
+    mv /etc/systemd/system/mnmon.service ${USRHOME}/.
+  fi
+
+  if [ -f /etc/systemd/system/mnmon.slice ]
+  then
+    echo "Saving mnmon.slice"
+    mv /etc/systemd/system/mnmon.slice ${USRHOME}/.
+  fi
+  
+  if [ -f /etc/systemd/system/mnmon.timer ]
+  then
+    echo "Saving mnmon.timer"
+    mv /etc/systemd/system/mnmon.timer ${USRHOME}/.
+  fi
+  
 }
 
 _check_v2_balance() {
@@ -1547,7 +1610,7 @@ _check_v3_balance() {
 
   V3WALLET_BALANCE=$( energi3 ${APPARG} --exec 'web3.fromWei(eth.getBalance(eth.coinbase), "ether")' attach 2>/dev/null )
   echo
-  echo -e "Energi v3 balance:${GREEN}${V3WALLET_BALANCE}${NC}"
+  echo -e "Energi3 balance:${GREEN}${V3WALLET_BALANCE}${NC}"
   echo
   sleep 3
 
@@ -1562,7 +1625,7 @@ _dump_wallet () {
   if [[ "${V2WALLET_BALANCE}" == 0 ]]
   then
     echo "Current balance of the Energi v2 wallet on this computer is ${V2WALLET_BALANCE} NRG"
-    echo "Nothing to to migrate to Energi v3. Continuing..."
+    echo "Nothing to to migrate to Energi3. Continuing..."
     sleep 0.3
     return
   else
@@ -1606,7 +1669,7 @@ _claimGen2Coins () {
         energi3 ${ARG} --exec "energi.claimGen2CoinsCombined('${PASSWORD}', eth.coinbase, '${TMP_DIR}/energi2wallet.dump')" attach 2>/dev/null
         sleep 3
       else
-        echo "Energi v2 needs to sync with Network to start migration to Energi v3."
+        echo "Energi v2 needs to sync with Network to start migration to Energi3."
         echo "The Snapshot Block ${MAINNETSSBLOCK} has not been reached"
         sleep 0.3
         return
@@ -1618,7 +1681,7 @@ _claimGen2Coins () {
         echo "Code to import into v3 goes here..."
         sleep 3
       else
-        echo "Energi v2 needs to sync with Network to start migration to Energi v3."
+        echo "Energi v2 needs to sync with Network to start migration to Energi3."
         echo "The Snapshot Block ${MAINNETSSBLOCK} has not been reached"
         sleep 0.3
         return
@@ -1774,7 +1837,7 @@ _menu_option_new () {
  \:\ \/ /:/  /
 ENERGI3
 echo "${GREEN}  \:\  /:/  /  ${NC}Options:"
-echo "${GREEN}   \:\/:/  /   ${NC}   a) New server installation of Energi v3"
+echo "${GREEN}   \:\/:/  /   ${NC}   a) New server installation of Energi3"
 echo "${GREEN}    \::/  /    ${NC}"
 echo "${GREEN}     \/__/     ${NC}   x) Exit without doing anything"
 echo ${NC}
@@ -1812,7 +1875,7 @@ _menu_option_upgrade () {
  \:\ \/ /:/  /
 ENERGI3
 echo "${GREEN}  \:\  /:/  /  ${NC}Options:"
-echo "${GREEN}   \:\/:/  /   ${NC}   a) Upgrade version of Energi v3"
+echo "${GREEN}   \:\/:/  /   ${NC}   a) Upgrade version of Energi3"
 echo "${GREEN}    \::/  /    ${NC}"
 echo "${GREEN}     \/__/     ${NC}   x) Exit without doing anything"
 echo ${NC}
@@ -1830,7 +1893,7 @@ _welcome_instructions () {
  /:/ /:/ /\__\ |______|_| \_|______|_|  \_\\_____|_____|____/
  \:\ \/ /:/  /
 ENERGI3
-echo "${GREEN}  \:\  /:/  /  ${NC}Welcome to the Energi v3 Installer."
+echo "${GREEN}  \:\  /:/  /  ${NC}Welcome to the Energi3 Installer."
 echo "${GREEN}   \:\/:/  /   ${NC}- New Install : No previous installs"
 echo "${GREEN}    \::/  /    ${NC}- Upgrade     : Upgrade previous version"
 echo "${GREEN}     \/__/     ${NC}- Migrate     : Migrate from Energi v2 (disabled)"
@@ -1942,7 +2005,7 @@ done
 
 
 #
-# Clears screen and present Energi v3 logo
+# Clears screen and present Energi3 logo
 _ascii_logo_bottom
 sleep 0.2
 _ascii_logo_2
@@ -1971,7 +2034,7 @@ case ${INSTALLTYPE} in
     #   * No energi.conf file on the computer
     #
     # Menu Options
-    #   a) New server installation of Energi v3
+    #   a) New server installation of Energi3
     #   x) Exit without doing anything
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1987,7 +2050,7 @@ case ${INSTALLTYPE} in
     
     case ${REPLY} in
       a)
-        # New server installation of Energi v3
+        # New server installation of Energi3
         
         # ==> Run as root / sudo <==
         _install_apt
@@ -2038,7 +2101,7 @@ case ${INSTALLTYPE} in
         fi
 
         REPLY=''
-        read -p "Do you want to auto start Energi v3 Node after computer reboots ([y]/n)?: " -r
+        read -p "Do you want to auto start Energi3 Node after computer reboots ([y]/n)?: " -r
         REPLY=${REPLY,,} # tolower
         if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
         then
@@ -2078,7 +2141,7 @@ case ${INSTALLTYPE} in
     #   * $ENERGI3_HOME/etc/migrated_to_v3.log exists
     #
     # Menu Options
-    #   a) Upgrade version of Energi v3
+    #   a) Upgrade version of Energi3
     #   x) Exit without doing anything
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
@@ -2095,7 +2158,7 @@ case ${INSTALLTYPE} in
     
     case ${REPLY} in
       a)
-        # Upgrade version of Energi v3
+        # Upgrade version of Energi3
         _stop_energi3
         _install_apt
         _restrict_logins
@@ -2143,7 +2206,7 @@ case ${INSTALLTYPE} in
         _upgrade_energi3
         
         REPLY=''
-        read -p "Do you want to auto start Energi v3 Node after computer reboots ([y]/n)?: " -r
+        read -p "Do you want to auto start Energi3 Node after computer reboots ([y]/n)?: " -r
         REPLY=${REPLY,,} # tolower
         if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
         then
@@ -2204,7 +2267,7 @@ case ${INSTALLTYPE} in
     
     case ${REPLY} in
       a)
-        # New server installation of Energi v3
+        # New server installation of Energi3
         _install_apt
         _restrict_logins
         _check_ismainnet
@@ -2287,7 +2350,7 @@ case ${INSTALLTYPE} in
           fi
         
           REPLY=''
-          read -p "Do you want to auto start Energi v3 Node after computer reboots ([y]/n)?: " -r
+          read -p "Do you want to auto start Energi3 Node after computer reboots ([y]/n)?: " -r
           REPLY=${REPLY,,} # tolower
           if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
           then
