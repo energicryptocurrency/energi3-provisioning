@@ -76,8 +76,12 @@ do
       OPTION=blocknumber
       break
       ;;
-    -stop)
+    -stop|stop)
       OPTION=halt
+      break
+      ;;
+    -start|start)
+      OPTION=start
       break
       ;;
     -d|--debug)
@@ -106,7 +110,8 @@ energi3-cli arguments:
   -blocknumber                 : Check blockNumber
   --bindip <address>           : Internal bind IP to use
   -k --privatekey <key>        : Private key to use
-  -stop                        : Stop Energi3
+  -start start                 : Strt energi3
+  -stop  stop                  : Stop Energi3
   -h --help                    : Display this help text
   -d --debug                   : Debug mode
 
@@ -125,6 +130,10 @@ case ${OPTION} in
   halt)
     EPID=`ps -ef | grep energi3 | grep console | awk '{print $2}'`
     kill ${EPID}
+    ;;
+  start)
+    echo "start script: run_screen_linux.sh"
+    break
     ;;
   listaccounts)
     $COMMAND 'personal.listAccounts' attach 2>/dev/null | jq -r '.[]'
