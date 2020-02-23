@@ -47,7 +47,7 @@ API_URL="https://api.github.com/repos/energicryptocurrency/energi3/releases/late
 #BASE_URL="https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts"
 # Test
 BASE_URL="https://raw.githubusercontent.com/zalam003/EnergiCore3/master/production/scripts"
-SCRIPT_URL="${BASE_URL}/linux"
+SCRIPT_URL="${BASE_URL}/macos"
 TP_URL="${BASE_URL}/thirdparty"
 DOC_URL="https://docs.energi.software"
 #GITURL="https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/"
@@ -142,8 +142,16 @@ _check_runas () {
 _check_install () {
 
   CHKV3USRTMP=/tmp/chk_v3_usr.tmp
-  find ${HOME} -name energi3.ipc | awk -F\/ '{print $3}' > ${CHKV3USRTMP}
+  if [[ -d ${HOME}/Library/EnergiCore3 ]]
+  then
+    find ${HOME}/Library/EnergiCore3 -name energi3.ipc | awk -F\/ '{print $3}' > ${CHKV3USRTMP}
+  else
+    touch ${CHKV3USRTMP}
+  fi
   V3USRCOUNT=`wc -l ${CHKV3USRTMP} | awk '{ print $1 }'`
+  # Clean-up temporary file
+  rm -rf ${CHKV3USRTMP}
+  
   USRNAME=`whoami`
   cd
   export USRHOME=`pwd`
@@ -194,9 +202,6 @@ _check_install () {
       ;;
   
   esac
-  
-  # Clean-up temporary file
-  rm -rf ${CHKV3USRTMP}
 
 }
 
@@ -269,18 +274,23 @@ _install_energi3 () {
   MN_SCRIPT=run_mn_macos.sh
   JS_SCRIPT=utils.js
   
-  # Check Github for URL of latest version
-  if [ -z "${GITHUB_LATEST}" ]
-  then
-    GITHUB_LATEST=`curl -s ${API_URL}`
+  # Install missing packages
+  if [[ ! -x "$(command -v brew)" ]]
+    ruby -e "$(curl -fsSL git.io/get-brew)"
   fi
-    if [[ ! -x "$(command -v wget)" ]]
+  if [[ ! -x "$(command -v wget)" ]]
   then
     brew install wget
   fi
   if [[ ! -x "$(command -v jq)" ]]
   then
     brew install jq
+  fi
+  
+  # Check Github for URL of latest version
+  if [ -z "${GITHUB_LATEST}" ]
+  then
+    GITHUB_LATEST=`curl -s ${API_URL}`
   fi
   BIN_URL=$( echo "${GITHUB_LATEST}" | jq -r '.assets[].browser_download_url' | grep -v debug | grep -v '.sig' | grep darwin )
  
@@ -384,14 +394,19 @@ _copy_keystore() {
   then
     mkdir -p "${HOME}/Library/EnergiCore3/keystore"
   fi
-  clear
-  echo
-  echo "Copy the Gen 3 address file into the keystore directory.  You can open it by doing the following:"
-  echo
-  echo "Finder -> Menubar (top of screen) -> Go -> Utilities, open Terminal, type/paste in "
-  echo "open \"${HOME}/Library/EnergiCore3/keystore\" "
-  echo
-  read -t 10 -p "Wait 10 sec or Press [ENTER] key to continue..."
+  
+  if [[ ! -f "${HOME}/Library/EnergiCore3/keystore/UTC*" ]]
+  then
+    clear
+    echo
+    echo "Copy the Gen 3 address file into the keystore directory.  You can open it by doing the following:"
+    echo
+    echo "Finder -> Menubar (top of screen) -> Go -> Utilities, open Terminal, type/paste in "
+    echo "open \"${HOME}/Library/EnergiCore3/keystore\" "
+    echo
+    read -t 10 -p "Wait 10 sec or Press [ENTER] key to continue..."
+  
+  fi
 
 }
 
@@ -768,15 +783,7 @@ case ${INSTALLTYPE} in
         
         _setup_appdir
         _install_energi3
-        
-        REPLY=''
-        read -p "Do you want to download keystore account file to the computer (y/[n])?: " -r
-        REPLY=$( echo "${REPLY}" | tr '[:upper:]' '[:lower:]' )
-
-        if [[ "${REPLY}" == 'y' ]]
-        then
-          _copy_keystore
-        fi
+        _copy_keystore
         
         ;;
         
