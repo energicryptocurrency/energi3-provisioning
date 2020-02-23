@@ -38,13 +38,13 @@ export DEBIAN_FRONTEND=noninteractive
 # Locations of Repositories and Guide
 API_URL="https://api.github.com/repos/energicryptocurrency/energi3/releases/latest"
 # Production
-#BASE_URL="https://raw.githubusercontent.com/energicryptocurrency/energi3/master/scripts"
+#BASE_URL="https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts"
 # Test
 BASE_URL="https://raw.githubusercontent.com/zalam003/EnergiCore3/master/production/scripts"
 SCRIPT_URL="${BASE_URL}/linux"
 TP_URL="${BASE_URL}/thirdparty"
-DOC_URL="https://energi.gitbook.io"
-#GITURL="https://raw.githubusercontent.com/energicryptocurrency/energi3"
+DOC_URL="https://docs.energi.software"
+#GITURL="https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/"
 
 # Energi3 Bootstrap Settings
 #export BLK_HASH=gsaqiry3h1ho3nh
@@ -2023,7 +2023,7 @@ _os_arch
 
 # Check Install type and set ENERGI3_HOME
 _check_install
-read -t 10 -p "Wait 10 sec or Press [ENTER] key to continue..."
+#read -t 10 -p "Wait 10 sec or Press [ENTER] key to continue..."
 
 # Present menu to choose an option based on Installation Type determined
 case ${INSTALLTYPE} in
