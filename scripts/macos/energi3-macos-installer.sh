@@ -276,8 +276,10 @@ _install_energi3 () {
   
   # Install missing packages
   if [[ ! -x "$(command -v brew)" ]]
+  then
     ruby -e "$(curl -fsSL git.io/get-brew)"
   fi
+  
   if [[ ! -x "$(command -v wget)" ]]
   then
     brew install wget
