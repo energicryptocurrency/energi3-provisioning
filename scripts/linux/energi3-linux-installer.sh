@@ -663,7 +663,9 @@ _install_energi3 () {
   # Pull energi3 from Amazon S3
   wget -4qo- "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-linux-amd64-alltools.tgz" --show-progress --progress=bar:force:noscroll 2>&1
   #wget -4qo- "${BIN_URL}" -O "${ENERGI3_EXE}" --show-progress --progress=bar:force:noscroll 2>&1
+  sleep 0.3
   
+  tar xvfz energi3-${GIT_LATEST}-linux-amd64-alltools.tgz
   sleep 0.3
   
   # Rename directory
