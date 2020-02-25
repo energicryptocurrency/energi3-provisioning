@@ -44,13 +44,16 @@ export DEBIAN_FRONTEND=noninteractive
 # Locations of Repositories and Guide
 API_URL="https://api.github.com/repos/energicryptocurrency/energi3/releases/latest"
 # Production
-#BASE_URL="https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts"
-# Test
-BASE_URL="https://raw.githubusercontent.com/zalam003/EnergiCore3/master/production/scripts"
+if [[ -z ${BASE_URL} ]]
+then
+  BASE_URL="https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts"
+fi
+#==> For testing set environment variable
+#BASE_URL="https://raw.githubusercontent.com/zalam003/EnergiCore3/master/production/scripts"
 SCRIPT_URL="${BASE_URL}/macos"
 TP_URL="${BASE_URL}/thirdparty"
 DOC_URL="https://docs.energi.software"
-#GITURL="https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/"
+S3URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/energi3/"
 
 # Energi3 Bootstrap Settings
 #export BLK_HASH=gsaqiry3h1ho3nh
@@ -144,7 +147,7 @@ _check_install () {
   CHKV3USRTMP=/tmp/chk_v3_usr.tmp
   if [[ -d ${HOME}/Library/EnergiCore3 ]]
   then
-    find ${HOME}/Library/EnergiCore3 -name energi3.ipc | awk -F\/ '{print $3}' > ${CHKV3USRTMP}
+    find ${HOME}/Library/EnergiCore3 -name nodekey | awk -F\/ '{print $3}' > ${CHKV3USRTMP}
   else
     touch ${CHKV3USRTMP}
   fi
@@ -284,27 +287,52 @@ _install_energi3 () {
   then
     brew install wget
   fi
+  
   if [[ ! -x "$(command -v jq)" ]]
   then
     brew install jq
   fi
   
   # Check Github for URL of latest version
-  if [ -z "${GITHUB_LATEST}" ]
+  if [ -z "${GIT_LATEST}" ]
   then
-    GITHUB_LATEST=`curl -s ${API_URL}`
+    GITHUB_LATEST=$( curl -s ${API_URL} )
+    GIT_VERSION=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
+    
+    # Extract latest version number without the 'v'
+    GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
   fi
-  BIN_URL=$( echo "${GITHUB_LATEST}" | jq -r '.assets[].browser_download_url' | grep -v debug | grep -v '.sig' | grep darwin )
  
   # Download from repositogy
   echo "Downloading Energi Core Node and scripts"
-  cd ${BIN_DIR}
-  if [ -f "${ENERGI3_EXE}" ]
+  if [ -d ${ENERGI3_HOME} ]
   then
-    mv ${ENERGI3_EXE} ${ENERGI3_EXE}.old
+    mv ${ENERGI3_HOME} ${ENERGI3_HOME}.old
+  fi 
+  
+  cd ${USRHOME}
+  # Pull energi3 from Amazon S3
+  curl "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-macos-amd64-alltools.tgz" --output energi3-${GIT_LATEST}-macos-amd64-alltools.tgz
+  #wget -4qo- "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-macos-amd64-alltools.tgz" --show-progress --progress=bar:force:noscroll 2>&1
+  #wget -4qo- "${BIN_URL}" -O "${ENERGI3_EXE}" --show-progress --progress=bar:force:noscroll 2>&1
+  sleep 0.3
+  
+  tar xvfz energi3-${GIT_LATEST}-macos-amd64-alltools.tgz
+  sleep 0.3
+  
+  # Rename directory
+  mv energi3-${GIT_LATEST}-macos-amd64 energi3
+  
+  # Check if software downloaded
+  if [ ! -d ${BIN_DIR} ]
+  then
+    echo "${RED}ERROR: energi3-${GIT_LATEST}-linux-amd64-alltools.tgz did not download${NC}"
+    sleep 5
   fi
-  #curl "${BIN_URL}" --output ${ENERGI3_EXE}
-  wget -4qo- "${BIN_URL}" -O "${ENERGI3_EXE}" --show-progress --progress=bar:force:noscroll 2>&1
+  
+  # Create missing app directories
+  _setup_appdir
+
   sleep 0.3
   chmod 755 ${ENERGI3_EXE}
   if [[ ${EUID} = 0 ]]
@@ -329,8 +357,8 @@ _install_energi3 () {
   then
     mv ${MN_SCRIPT} ${MN_SCRIPT}.old
   fi  
-  #curl -sL "${SCRIPT_URL}/${MN_SCRIPT}" > ${MN_SCRIPT}
-  wget -4qo- "${SCRIPT_URL}/${MN_SCRIPT}?dl=1" -O "${MN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
+  curl -sL "${SCRIPT_URL}/${MN_SCRIPT}" --output ${MN_SCRIPT}
+  #wget -4qo- "${SCRIPT_URL}/${MN_SCRIPT}?dl=1" -O "${MN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
   sleep 0.3
   chmod 755 ${MN_SCRIPT}
   if [[ ${EUID} = 0 ]]
@@ -343,8 +371,8 @@ _install_energi3 () {
   then
     mv ${JS_SCRIPT} ${JS_SCRIPT}.old
   fi
-  #curl -sL "${BASE_URL}/utils/${JS_SCRIPT}" > ${JS_SCRIPT}
-  wget -4qo- "${BASE_URL}/utils/${JS_SCRIPT}?dl=1" -O "${JS_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
+  curl -sL "${BASE_URL}/utils/${JS_SCRIPT}" --output ${JS_SCRIPT}
+  #wget -4qo- "${BASE_URL}/utils/${JS_SCRIPT}?dl=1" -O "${JS_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
   sleep 0.3
   chmod 644 ${JS_SCRIPT}
   if [[ ${EUID} = 0 ]]
@@ -366,6 +394,9 @@ _version_gt() {
 }
 
 _upgrade_energi3 () {
+
+  # Set PATH to energi3
+  export BIN_DIR=${ENERGI3_HOME}/bin
 
   # Check the latest version in Github 
   
@@ -782,8 +813,6 @@ case ${INSTALLTYPE} in
     case ${REPLY} in
       a)
         # New server installation of Energi3
-        
-        _setup_appdir
         _install_energi3
         _copy_keystore
         
@@ -838,8 +867,6 @@ case ${INSTALLTYPE} in
     case ${REPLY} in
       a)
         # Upgrade version of Energi3
-        
-        _setup_appdir
         _upgrade_energi3
         
         ;;
