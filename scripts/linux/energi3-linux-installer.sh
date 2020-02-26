@@ -636,7 +636,9 @@ _install_energi3 () {
 
   # Name of scripts
   NODE_SCRIPT=start_staking.sh
+  NODE_SCREEN_SCRIPT=start_screen_staking.sh
   MN_SCRIPT=start_mn.sh
+  MN_SCREEN_SCRIPT=start_screen_mn.sh
   JS_SCRIPT=utils.js
   #NODE_SCRIPT=run_linux.sh
   #MN_SCRIPT=run_mn_linux.sh
@@ -704,6 +706,19 @@ _install_energi3 () {
     fi
   fi
 
+  if [ -f "${ENERGI3_HOME}.old/bin/${NODE_SCREEN_SCRIPT}" ]
+  then
+    mv "${ENERGI3_HOME}.old/bin/${NODE_SCREEN_SCRIPT}" "${ENERGI3_HOME}/bin/${NODE_SCREEN_SCRIPT}"
+  else
+    wget -4qo- "${SCRIPT_URL}/${NODE_SCREEN_SCRIPT}?dl=1" -O "${NODE_SCREEN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
+    sleep 0.3
+    chmod 755 ${NODE_SCREEN_SCRIPT}
+    if [[ ${EUID} = 0 ]]
+    then
+      chown ${USRNAME}:${USRNAME} ${NODE_SCREEN_SCRIPT}
+    fi
+  fi
+
   if [ -f "${ENERGI3_HOME}.old/bin/${MN_SCRIPT}" ]
   then
     mv "${ENERGI3_HOME}.old/bin/${MN_SCRIPT}" "${ENERGI3_HOME}/bin/${MN_SCRIPT}"
@@ -714,6 +729,19 @@ _install_energi3 () {
     if [[ ${EUID} = 0 ]]
     then
       chown ${USRNAME}:${USRNAME} ${MN_SCRIPT}
+    fi
+  fi
+
+  if [ -f "${ENERGI3_HOME}.old/bin/${MN_SCREEN_SCRIPT}" ]
+  then
+    mv "${ENERGI3_HOME}.old/bin/${MN_SCREEN_SCRIPT}" "${ENERGI3_HOME}/bin/${MN_SCREEN_SCRIPT}"
+  else
+    wget -4qo- "${SCRIPT_URL}/${MN_SCREEN_SCRIPT}?dl=1" -O "${MN_SCREEN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
+    sleep 0.3
+    chmod 755 ${MN_SCREEN_SCRIPT}
+    if [[ ${EUID} = 0 ]]
+    then
+      chown ${USRNAME}:${USRNAME} ${MN_SCREEN_SCRIPT}
     fi
   fi
 
