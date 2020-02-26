@@ -9,7 +9,7 @@
 #         script will upgrade an existing installation.
 # 
 # Version:
-#   1.1.0 20200226 ZA Initial Script
+#   1.2.0 20200226 ZA Initial Script
 #
 : '
 # Run the script to get started:
@@ -53,7 +53,7 @@ fi
 SCRIPT_URL="${BASE_URL}/macos"
 TP_URL="${BASE_URL}/thirdparty"
 DOC_URL="https://docs.energi.software"
-S3URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/energi3/"
+S3URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/energi3"
 
 # Energi3 Bootstrap Settings
 #export BLK_HASH=gsaqiry3h1ho3nh
@@ -271,36 +271,23 @@ _install_energi3 () {
   # Download and install node software and supporting scripts
 
   # Name of scripts
-  #NODE_SCRIPT=start_staking.sh
-  #MN_SCRIPT=start_mn.sh
-  NODE_SCRIPT=run_macos.sh
-  MN_SCRIPT=run_mn_macos.sh
+  NODE_SCRIPT=start_staking.sh
+  MN_SCRIPT=start_mn.sh
   JS_SCRIPT=utils.js
-  
-  # Install missing packages
-  if [[ ! -x "$(command -v brew)" ]]
-  then
-    ruby -e "$(curl -fsSL git.io/get-brew)"
-  fi
-  
-  if [[ ! -x "$(command -v wget)" ]]
-  then
-    brew install wget
-  fi
-  
-  if [[ ! -x "$(command -v jq)" ]]
-  then
-    brew install jq
-  fi
+  #NODE_SCRIPT=run_macos.sh
+  #MN_SCRIPT=run_mn_macos.sh
   
   # Check Github for URL of latest version
   if [ -z "${GIT_LATEST}" ]
   then
+    curl -fsSL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64 --output "${HOME}/jq"
+    chmod 755 jq  
     GITHUB_LATEST=$( curl -s ${API_URL} )
-    GIT_VERSION=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
+    GIT_VERSION=$( echo "${GITHUB_LATEST}" | ${HOME}/jq -r '.tag_name' )
     
     # Extract latest version number without the 'v'
     GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
+    rm "${HOME}/jq"
   fi
  
   # Download from repositogy
@@ -312,7 +299,7 @@ _install_energi3 () {
   
   cd ${USRHOME}
   # Pull energi3 from Amazon S3
-  curl "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-macos-amd64-alltools.tgz" --output energi3-${GIT_LATEST}-macos-amd64-alltools.tgz
+  curl -fsSL "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-macos-amd64-alltools.tgz" --output energi3-${GIT_LATEST}-macos-amd64-alltools.tgz
   #wget -4qo- "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-macos-amd64-alltools.tgz" --show-progress --progress=bar:force:noscroll 2>&1
   #wget -4qo- "${BIN_URL}" -O "${ENERGI3_EXE}" --show-progress --progress=bar:force:noscroll 2>&1
   sleep 0.3
@@ -322,6 +309,7 @@ _install_energi3 () {
   
   # Rename directory
   mv energi3-${GIT_LATEST}-macos-amd64 energi3
+  rm energi3-${GIT_LATEST}-macos-amd64-alltools.tgz
   
   # Check if software downloaded
   if [ ! -d ${BIN_DIR} ]
@@ -333,52 +321,64 @@ _install_energi3 () {
   # Create missing app directories
   _setup_appdir
 
-  sleep 0.3
+  cd ${BIN_DIR}
+
   chmod 755 ${ENERGI3_EXE}
   if [[ ${EUID} = 0 ]]
   then
     chown ${USRNAME}:${USRNAME} ${ENERGI3_EXE}
   fi    
   
-  if [ -f "${NODE_SCRIPT}" ]
+  if [ -f "${ENERGI3_HOME}.old/bin/${NODE_SCRIPT}" ]
   then
-    mv ${NODE_SCRIPT} ${NODE_SCRIPT}.old
-  fi  
-  #curl -sL "${SCRIPT_URL}/${NODE_SCRIPT}" > ${NODE_SCRIPT}
-  wget -4qo- "${SCRIPT_URL}/${NODE_SCRIPT}?dl=1" -O "${NODE_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
-  sleep 0.3
-  chmod 755 ${NODE_SCRIPT}
-  if [[ ${EUID} = 0 ]]
-  then
-    chown ${USRNAME}:${USRNAME} ${NODE_SCRIPT}
+    mv "${ENERGI3_HOME}.old/bin/${NODE_SCRIPT}" "${ENERGI3_HOME}/bin/${NODE_SCRIPT}"
+  else
+    curl -sL "${SCRIPT_URL}/${NODE_SCRIPT}" --output ${NODE_SCRIPT}
+    #wget -4qo- "${SCRIPT_URL}/${NODE_SCRIPT}?dl=1" -O "${NODE_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
+    sleep 0.3
+    chmod 755 ${NODE_SCRIPT}
+    if [[ ${EUID} = 0 ]]
+    then
+      chown ${USRNAME}:${USRNAME} ${NODE_SCRIPT}
+    fi
   fi
 
-  if [ -f "${MN_SCRIPT}" ]
+  if [ -f "${ENERGI3_HOME}.old/bin/${MN_SCRIPT}" ]
   then
-    mv ${MN_SCRIPT} ${MN_SCRIPT}.old
-  fi  
-  curl -sL "${SCRIPT_URL}/${MN_SCRIPT}" --output ${MN_SCRIPT}
-  #wget -4qo- "${SCRIPT_URL}/${MN_SCRIPT}?dl=1" -O "${MN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
-  sleep 0.3
-  chmod 755 ${MN_SCRIPT}
-  if [[ ${EUID} = 0 ]]
-  then
-    chown ${USRNAME}:${USRNAME} ${MN_SCRIPT}
+    mv "${ENERGI3_HOME}.old/bin/${MN_SCRIPT}" "${ENERGI3_HOME}/bin/${MN_SCRIPT}"
+  else
+    curl -sL "${SCRIPT_URL}/${MN_SCRIPT}" --output ${MN_SCRIPT}
+    #wget -4qo- "${SCRIPT_URL}/${MN_SCRIPT}?dl=1" -O "${MN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
+    sleep 0.3
+    chmod 755 ${MN_SCRIPT}
+    if [[ ${EUID} = 0 ]]
+    then
+      chown ${USRNAME}:${USRNAME} ${MN_SCRIPT}
+    fi
   fi
 
+  if [ ! -d ${JS_DIR} ]
+  then
+    echo "    Creating directory: ${JS_DIR}"
+    mkdir -p ${JS_DIR}
+  fi  
   cd ${JS_DIR}
-  if [ -f "${JS_SCRIPT}" ]
+  if [ -f "${ENERGI3_HOME}.old/js/${JS_SCRIPT}" ]
   then
-    mv ${JS_SCRIPT} ${JS_SCRIPT}.old
+    mv ${ENERGI3_HOME}.old/js/${JS_SCRIPT} ${JS_SCRIPT}
+  else
+    curl -sL "${BASE_URL}/utils/${JS_SCRIPT}" --output ${JS_SCRIPT}
+    #wget -4qo- "${BASE_URL}/utils/${JS_SCRIPT}?dl=1" -O "${JS_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
+    sleep 0.3
+    chmod 644 ${JS_SCRIPT}
+    if [[ ${EUID} = 0 ]]
+    then
+      chown ${USRNAME}:${USRNAME} ${JS_SCRIPT}
+    fi
   fi
-  curl -sL "${BASE_URL}/utils/${JS_SCRIPT}" --output ${JS_SCRIPT}
-  #wget -4qo- "${BASE_URL}/utils/${JS_SCRIPT}?dl=1" -O "${JS_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
-  sleep 0.3
-  chmod 644 ${JS_SCRIPT}
-  if [[ ${EUID} = 0 ]]
-  then
-    chown ${USRNAME}:${USRNAME} ${JS_SCRIPT}
-  fi
+  
+  # Clean-up
+  rm -rf ${ENERGI3_HOME}.old
   
   # Change to install directory
   cd
@@ -398,6 +398,12 @@ _upgrade_energi3 () {
   # Set PATH to energi3
   export BIN_DIR=${ENERGI3_HOME}/bin
 
+  if [[ -z ${GIT_LATEST} ]]
+  then
+    curl -fsSL https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64 --output "${HOME}/jq"
+    chmod 755 jq
+  fi
+  
   # Check the latest version in Github 
   
   GITHUB_LATEST=$( curl -s ${API_URL} )
@@ -416,6 +422,11 @@ _upgrade_energi3 () {
     echo "Latest version of Energi3 is installed: ${INSTALL_VERSION}"
     echo "Nothing to install"
     sleep 0.3
+  fi
+  
+  if [[ -x "${HOME}/jq" ]]
+  then
+    rm "${HOME}/jq"
   fi
 
 }
@@ -809,7 +820,7 @@ case ${INSTALLTYPE} in
     then
       REPLY='h'
     fi
-    echo "test"
+
     case ${REPLY} in
       a)
         # New server installation of Energi3
