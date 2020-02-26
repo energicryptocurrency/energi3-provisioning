@@ -9,7 +9,7 @@
 #         script will upgrade an existing installation.
 # 
 # Version:
-#   1.0.0 20200212 ZA Initial Script
+#   1.1.0 20200226 ZA Initial Script
 #
 : '
 # Run the script to get started:
