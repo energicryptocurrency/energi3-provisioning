@@ -11,7 +11,7 @@
 #         from v2 to v3.
 # 
 # Version:
-#   1.1.0 20200225 ZA Initial Script
+#   1.2.0 20200226 ZA Initial Script
 #
 : '
 # Run the script to get started:
@@ -40,14 +40,14 @@ API_URL="https://api.github.com/repos/energicryptocurrency/energi3/releases/late
 # Production
 if [[ -z ${BASE_URL} ]]
 then
-  BASE_URL="https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts"
+  BASE_URL="raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts"
 fi
 #==> For testing set environment variable
-#BASE_URL="https://raw.githubusercontent.com/zalam003/EnergiCore3/master/production/scripts"
+#BASE_URL="raw.githubusercontent.com/zalam003/EnergiCore3/master/production/scripts"
 SCRIPT_URL="${BASE_URL}/linux"
 TP_URL="${BASE_URL}/thirdparty"
 DOC_URL="https://docs.energi.software"
-S3URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/energi3/"
+S3URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/energi3"
 
 # Energi3 Bootstrap Settings
 #export BLK_HASH=gsaqiry3h1ho3nh
@@ -635,11 +635,11 @@ _install_energi3 () {
   # Download and install node software and supporting scripts
 
   # Name of scripts
-  #NODE_SCRIPT=start_staking.sh
-  #MN_SCRIPT=start_mn.sh
-  NODE_SCRIPT=run_linux.sh
-  MN_SCRIPT=run_mn_linux.sh
+  NODE_SCRIPT=start_staking.sh
+  MN_SCRIPT=start_mn.sh
   JS_SCRIPT=utils.js
+  #NODE_SCRIPT=run_linux.sh
+  #MN_SCRIPT=run_mn_linux.sh
   
   # Check Github for URL of latest version
   if [ -z "${GIT_LATEST}" ]
@@ -670,6 +670,7 @@ _install_energi3 () {
   
   # Rename directory
   mv energi3-${GIT_LATEST}-linux-amd64 energi3
+  rm energi3-${GIT_LATEST}-linux-amd64-alltools.tgz
   
   # Check if software downloaded
   if [ ! -d ${BIN_DIR} ]
@@ -690,42 +691,53 @@ _install_energi3 () {
     chown ${USRNAME}:${USRNAME} ${ENERGI3_EXE}
   fi    
   
-  if [ -f "${NODE_SCRIPT}" ]
+  if [ -f "${ENERGI3_HOME}.old/bin/${NODE_SCRIPT}" ]
   then
-    mv ${NODE_SCRIPT} ${NODE_SCRIPT}.old
-  fi  
-  wget -4qo- "${SCRIPT_URL}/${NODE_SCRIPT}?dl=1" -O "${NODE_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
-  sleep 0.3
-  chmod 755 ${NODE_SCRIPT}
-  if [[ ${EUID} = 0 ]]
-  then
-    chown ${USRNAME}:${USRNAME} ${NODE_SCRIPT}
+    mv "${ENERGI3_HOME}.old/bin/${NODE_SCRIPT}" "${ENERGI3_HOME}/bin/${NODE_SCRIPT}"
+  else
+    wget -4qo- "${SCRIPT_URL}/${NODE_SCRIPT}?dl=1" -O "${NODE_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
+    sleep 0.3
+    chmod 755 ${NODE_SCRIPT}
+    if [[ ${EUID} = 0 ]]
+    then
+      chown ${USRNAME}:${USRNAME} ${NODE_SCRIPT}
+    fi
   fi
 
-  if [ -f "${MN_SCRIPT}" ]
+  if [ -f "${ENERGI3_HOME}.old/bin/${MN_SCRIPT}" ]
   then
-    mv ${MN_SCRIPT} ${MN_SCRIPT}.old
-  fi  
-  wget -4qo- "${SCRIPT_URL}/${MN_SCRIPT}?dl=1" -O "${MN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
-  sleep 0.3
-  chmod 755 ${MN_SCRIPT}
-  if [[ ${EUID} = 0 ]]
-  then
-    chown ${USRNAME}:${USRNAME} ${MN_SCRIPT}
+    mv "${ENERGI3_HOME}.old/bin/${MN_SCRIPT}" "${ENERGI3_HOME}/bin/${MN_SCRIPT}"
+  else
+    wget -4qo- "${SCRIPT_URL}/${MN_SCRIPT}?dl=1" -O "${MN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
+    sleep 0.3
+    chmod 755 ${MN_SCRIPT}
+    if [[ ${EUID} = 0 ]]
+    then
+      chown ${USRNAME}:${USRNAME} ${MN_SCRIPT}
+    fi
   fi
 
+  if [ ! -d ${JS_DIR} ]
+  then
+    echo "    Creating directory: ${JS_DIR}"
+    mkdir -p ${JS_DIR}
+  fi  
   cd ${JS_DIR}
-  if [ -f "${JS_SCRIPT}" ]
+  if [ -f "${ENERGI3_HOME}.old/js/${JS_SCRIPT}" ]
   then
-    mv ${JS_SCRIPT} ${JS_SCRIPT}.old
+    mv ${ENERGI3_HOME}.old/js/${JS_SCRIPT} ${JS_SCRIPT}
+  else
+    wget -4qo- "${BASE_URL}/utils/${JS_SCRIPT}?dl=1" -O "${JS_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
+    sleep 0.3
+    chmod 644 ${JS_SCRIPT}
+    if [[ ${EUID} = 0 ]]
+    then
+      chown ${USRNAME}:${USRNAME} ${JS_SCRIPT}
+    fi
   fi
-  wget -4qo- "${BASE_URL}/utils/${JS_SCRIPT}?dl=1" -O "${JS_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
-  sleep 0.3
-  chmod 644 ${JS_SCRIPT}
-  if [[ ${EUID} = 0 ]]
-  then
-    chown ${USRNAME}:${USRNAME} ${JS_SCRIPT}
-  fi
+  
+  # Clean-up
+  rm -rf ${ENERGI3_HOME}.old
   
   # Change to install directory
   cd
@@ -754,7 +766,7 @@ _upgrade_energi3 () {
   GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
   
   # Installed Version
-  INSTALL_VERSION=$( ${BIN_DIR}/${ENERGI3_EXE} version | grep "^Version" | awk '{ print $2 }' | awk -F\- '{ print $1 }' 2>/dev/null )
+  INSTALL_VERSION=$( ${BIN_DIR}/${ENERGI3_EXE} version 2>/dev/null | grep "^Version" | awk '{ print $2 }' | awk -F\- '{ print $1 }' )
   
   if _version_gt ${GIT_LATEST} ${INSTALL_VERSION}; then
     echo "Installing newer version ${GIT_VERSION} from Github"
