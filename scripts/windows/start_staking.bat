@@ -1,47 +1,67 @@
 @echo OFF
 
 ::####################################################################
-:: Description: This script is to start Energi 3.x aka Gen3 in
-::              Windows environment
+:: Description: Script to start Energi Core Node 3.x on Windows
 ::
 :: Run this script
-:: run_windows.bat
+:: start_staking.bat
 ::####################################################################
 
 set "ENERGI3_HOME=%ProgramFiles%\Energi Gen 3"
 set "BIN_DIR=%ENERGI3_HOME%\bin"
-set "DATA_DIR=EnergiCore3\energi3"
+set "JSHOME=%ENERGI3_HOME%\js"
 
-%BIN_DIR%\energi3.exe version >version.tmp
-findstr /B VERSION version.tmp
-del version.tmp
+:: Determine Version of energi3 istalled
+set "VERSION="
+FOR /f "tokens=1*delims=: " %%a IN ('"%BIN_DIR%\energi3.exe" version' ) DO (
+ IF "%%a"=="Version" SET "VERSION=%%b"
+)
 
-set "LOG_DIR=%APPDATA%\EnergiCore3\log"
+:: Check to see if running on testnet or mainnet
+if "%1" == "-t" (
+  set "ARG=-testnet"
+  set "RPCPORT=49796"
+  set "WSPORT=49795
+  set "DATA_DIR=EnergiCore3\testnet\energi3"
+  set "LOG_DIR=%APPDATA%\EnergiCore3\testnet\log"
+  @echo Starting Energi Core Node %VERSION% for Staking in testnet
+) else (
+  set "ARG="
+  set "RPCPORT=39796"
+  set "WSPORT=39795
+  set "DATA_DIR=EnergiCore3\energi3"
+  set "LOG_DIR=%APPDATA%\EnergiCore3\log"
+  @echo Starting Energi Core Node %VERSION% for Staking
+)
 
+:: Create LOG_DIR
 if not exist %LOG_DIR% (
   md %LOG_DIR%
   )
 
-set "BLOCKCHAIN_DIR=%APPDATA%\%DATA_DIR%"
-set "DEFAULT_EXE_LOCATION=%BIN_DIR%\energi3.exe"
+:: Find Internet facing IP address
+curl -s https://ifconfig.me/ > ipaddr.tmp
+set /p IP= < ipaddr.tmp
+del ipaddr.tmp
 
-set "JSHOME=%ENERGI3_HOME%\js"
-
+::
+:: Main start script
+::
 @echo Changing to install directory
 cd "%BIN_DIR%"
 
-@echo Starting Energi Core Node %VERSION% for staking
-%windir%\system32\cmd.exe /c %DEFAULT_EXE_LOCATION%^
+%DEFAULT_EXE_LOCATION%^
+    %ARG%^
     --mine^
     --preload %JSHOME%\utils.js^
     --rpc^
-    --rpcport 39796^
+    --rpcport %RPCPORT%^
     --rpcaddr "127.0.0.1"^
     --rpcapi admin,eth,web3,rpc,personal,energi^
     --ws^
     --wsaddr "127.0.0.1"^
-    --wsport 39795^
+    --wsport %WSPORT%^
     --wsapi admin,eth,net,web3,personal,energi^
-    --verbosity 3 console 2>> %LOG_DIR%\energicore3.log
+    --verbosity 3 console 2>> %%LOG_DIR%\energicore3.log%
 
 pause
