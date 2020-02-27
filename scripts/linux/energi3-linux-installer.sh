@@ -1921,8 +1921,8 @@ _end_instructions () {
 ENERGI3
 echo "${GREEN}  \:\  /:/  /  ${NC}Thank you for supporting Energi! Good luck staking."
 echo "${GREEN}   \:\/:/  /   ${NC}Run the following script to start/stop the Node:"
-echo "${GREEN}    \::/  /    ${NC}- start_node.sh    Use the script to start the Node"
-echo "${GREEN}     \/__/     ${NC}- stop_node.sh     Use the script to stop the Node"
+echo "${GREEN}    \::/  /    ${NC}- start_screen_staking.sh  Script to start staking"
+echo "${GREEN}     \/__/     ${NC}- start_screen_mn.sh       Script to start masternode"
 echo ${NC}
 echo "For instructions visit: ${DOC_URL}"
 echo
