@@ -179,6 +179,9 @@ _add_nrgstaker () {
         
 #    fi
 
+    export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
+    export ENERGI3_HOME=${USRHOME}/energi3
+    
     ${SUDO} usermod -aG sudo ${USRNAME}
     touch /home/${USRNAME}/.sudo_as_admin_successful
     chmod 644 /home/${USRNAME}/.sudo_as_admin_successful
@@ -257,10 +260,7 @@ _check_install () {
           INSTALLTYPE=new
           
           _add_nrgstaker
-          
-          export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
-          export ENERGI3_HOME=${USRHOME}/energi3
-          
+                    
           ;;
         
         *)
@@ -275,9 +275,6 @@ _check_install () {
           echo "Installing new version of Energi3 as ${USRNAME}"
           
           _add_nrgstaker
-          
-          export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
-          export ENERGI3_HOME=${USRHOME}/energi3
 
           ;;    
 
