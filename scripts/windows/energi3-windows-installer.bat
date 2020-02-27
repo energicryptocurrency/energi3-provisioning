@@ -308,7 +308,7 @@ exit /b
 
 :createshortcut
 @echo Set WshShell = WScript.CreateObject("WScript.Shell") > "%TMP_DIR%\CreateShortcut.vbs"
-@echo sLinkFile = "%userprofile%\Desktop\Energi3MN.lnk" >> "%TMP_DIR%\CreateShortcut.vbs"
+@echo sLinkFile = "%userprofile%\Desktop\Energi3Stake.lnk" >> "%TMP_DIR%\CreateShortcut.vbs"
 @echo Set oMyShortCut = WshShell.CreateShortcut(sLinkFile) >> "%TMP_DIR%\CreateShortcut.vbs"
 @echo oMyShortcut.IconLocation = "%BIN_DIR%\energi3.ico" >> "%TMP_DIR%\CreateShortcut.vbs"
 if /I "%isMainnet%"=="Y" (
@@ -319,7 +319,7 @@ if /I "%isMainnet%"=="Y" (
 @echo oMyShortCut.WorkingDirectory = "%BIN_DIR%" >> "%TMP_DIR%\CreateShortcut.vbs"
 @echo oMyShortCut.Save >> "%TMP_DIR%\CreateShortcut.vbs"
 
-if not exist "%userprofile%\Desktop\Energi3MN.lnk" (
+if not exist "%userprofile%\Desktop\Energi3Stake.lnk" (
   cscript "%TMP_DIR%\CreateShortcut.vbs"
   @echo Energi3 shortcut created on Desktop
   ) else (
