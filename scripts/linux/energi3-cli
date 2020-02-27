@@ -32,6 +32,10 @@ do
       ADDR=$1
       break
       ;;
+    -enode|enode)
+      OPTION=enode
+      break
+      ;;
     -unlock|--unlock)
       OPTION=unlock
       ADDR=$1
@@ -50,11 +54,11 @@ do
       ADDR=$1
       break
       ;;
-    -checkAllBalances
+    -checkAllBalances)
       OPTION=checkAllBalances
       break
       ;;
-    -mnBalances
+    -mnBalances)
       OPTION=mnBalances
       break
       ;;
@@ -94,7 +98,8 @@ energi3-cli arguments:
   -t -testnet                  : Run in testnet
   -l -listaccounts             : List accounts
   -newaccount <password>       : Create a new account
-  -mninfo                      : Masternode information
+  -mninfo [address]            : Masternode details
+  -enode                       : Masternode enode information
   -unlock <address> <password> : Unlock address for staking
   -depositcollateral <address> <amount> <password>
                                : depositCollateral to Masternode
@@ -124,7 +129,7 @@ EOL
   esac
 done
 
-COMMAND="energi3 ${ARG} --exec"
+COMMAND="energi3 ${ARG} attach --exec"
 
 case ${OPTION} in
   halt)
@@ -133,55 +138,57 @@ case ${OPTION} in
     ;;
   start)
     echo "start script: run_screen_linux.sh"
-    break
     ;;
   listaccounts)
-    $COMMAND 'personal.listAccounts' attach 2>/dev/null | jq -r '.[]'
+    $COMMAND 'personal.listAccounts' 2>/dev/null | jq -r '.[]'
     ;;
   newaccount)
-    $COMMAND "personal.newAccount('$NEWADDRPW')" attach 2>/dev/null
+    $COMMAND "personal.newAccount('$NEWADDRPW')" 2>/dev/null
     ;;
   mninfo)
     if [[ -z "$ADDR" ]]
     then
-      $COMMAND "masternode.masternodeInfo(eth.coinbase)" attach 2>/dev/null
+      $COMMAND "masternode.masternodeInfo(eth.coinbase)" 2>/dev/null
     else
-      $COMMAND "masternode.masternodeInfo('$ADDR')" attach 2>/dev/null
+      $COMMAND "masternode.masternodeInfo('$ADDR')" 2>/dev/null
     fi
     ;;
+  enode)
+    $COMMAND "admin.nodeInfo.enode" 2>/dev/null | jq -r '.[]'
+    ;;
   unlock)
-    $COMMAND "personal.unlockAccount('$ADDR', '$ADDRPW', 0)" attach 2>/dev/null
+    $COMMAND "personal.unlockAccount('$ADDR', '$ADDRPW', 0)" 2>/dev/null
     ;;
   depositcollateral)
-    $COMMAND "masternode.depositCollateral('$ADDR', web3.toWei('$AMOUNT', 'ether'), '$ADDRPW)" attach 2>/dev/null
+    $COMMAND "masternode.depositCollateral('$ADDR', web3.toWei('$AMOUNT', 'ether'), '$ADDRPW)" 2>/dev/null
     ;;
   withdrawcollateral)
-    $COMMAND "masternode.withdrawCollateral ('$ADDR', web3.toWei('$AMOUNT', 'ether'), '$ADDRPW')" attach 2>/dev/null
+    $COMMAND "masternode.withdrawCollateral ('$ADDR', web3.toWei('$AMOUNT', 'ether'), '$ADDRPW')" 2>/dev/null
     ;;
   collateralbalance)
-    $COMMAND "masternode.collateralBalance('$ADDR')" attach 2>/dev/null
+    $COMMAND "masternode.collateralBalance('$ADDR')" 2>/dev/null
     ;;
   checkAllBalances)
-    for i in `$COMMAND --exec 'personal.listAccounts' attach 2>/dev/null | jq -r '.[]'`
+    for i in `$COMMAND --exec 'personal.listAccounts' 2>/dev/null | jq -r '.[]'`
     do
       echo -n "${i}: "
-      $COMMAND --exec "web3.fromWei(eth.getBalance('${i}'), 'ether')" attach 2>/dev/null
+      $COMMAND --exec "web3.fromWei(eth.getBalance('${i}'), 'ether')" 2>/dev/null
     done
     ;;
   mnBalances)
-    $COMMAND "mnBalances" attach 2>/dev/null
+    $COMMAND "mnBalances" 2>/dev/null
     ;;
   announce)
-    $COMMAND "masternode.announce('$ADDR', admin.nodeInfo.enode, '$ADDRPW')" attach 2>/dev/null
+    $COMMAND "masternode.announce('$ADDR', admin.nodeInfo.enode, '$ADDRPW')" 2>/dev/null
     ;;
   blocknumber)
-    $COMMAND 'eth.blockNumber' attach 2>/dev/null
+    $COMMAND 'eth.blockNumber' 2>/dev/null
     ;;
   stakestatus)
-    $COMMAND 'personal.listWallets[0].status' attach 2>/dev/null
+    $COMMAND 'personal.listWallets[0].status' 2>/dev/null
     ;;
   mnstatus)
-    $COMMAND 'masternode.masternodeInfo(eth.coinbase).isActive' attach 2>/dev/null
+    $COMMAND 'masternode.masternodeInfo(eth.coinbase).isActive' 2>/dev/null
     ;;
 
 esac
