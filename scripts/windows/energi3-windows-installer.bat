@@ -312,9 +312,9 @@ exit /b
 @echo Set oMyShortCut = WshShell.CreateShortcut(sLinkFile) >> "%TMP_DIR%\CreateShortcut.vbs"
 @echo oMyShortcut.IconLocation = "%BIN_DIR%\energi3.ico" >> "%TMP_DIR%\CreateShortcut.vbs"
 if /I "%isMainnet%"=="Y" (
-  @echo oMyShortCut.TargetPath = "%windir%\system32\cmd.exe" /c "%BIN_DIR%\start_mn.bat" >> "%TMP_DIR%\CreateShortcut.vbs"
+  @echo oMyShortCut.TargetPath = "%BIN_DIR%\start_mn.bat" >> "%TMP_DIR%\CreateShortcut.vbs"
 ) else (
-  @echo oMyShortCut.TargetPath = "%windir%\system32\cmd.exe" /c "%BIN_DIR%\staking_mn.bat -t" >> "%TMP_DIR%\CreateShortcut.vbs"
+  @echo oMyShortCut.TargetPath = "%BIN_DIR%\staking_mn.bat" -t >> "%TMP_DIR%\CreateShortcut.vbs"
 )
 @echo oMyShortCut.WorkingDirectory = "%BIN_DIR%" >> "%TMP_DIR%\CreateShortcut.vbs"
 @echo oMyShortCut.Save >> "%TMP_DIR%\CreateShortcut.vbs"
