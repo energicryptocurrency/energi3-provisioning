@@ -147,6 +147,7 @@ if exist "%BIN_DIR%\%EXE_NAME%" (
   )
   set RUN_VERSION=%RUN_VERSION:-=&rem.%
   @echo Current version of Energi3 installed: %RUN_VERSION%
+  TIMEOUT /T 5
 ) else (
   @echo Energi3 is not installed in %BIN_DIR% of this computer.
   set "NEWINSTALL=Y"
@@ -179,10 +180,11 @@ del "%TMP_DIR%\appurl.tmp"
 del "%TMP_DIR%\gitversion.txt"
 
 echo GIT_VERSION: %GIT_VERSION%
+TIMEOUT /T 3
 if /I "%NEWINSTALL%" == "Y" goto :NEWVERSION
 
 :: Compare Versions
-call :testVersions  %GIT_VERSION%  %VERSION%
+call :testVersions  %GIT_VERSION%  %RUN_VERSION%
 exit /b
 
 :testVersions  version1  version2
@@ -237,36 +239,31 @@ exit /b
 :: Main program to download and setup Energi Gen 3
 ::
 :NEWVERSION
-  @echo Download Energi3 Core Node
+  @echo Download Energi Core Node %GIT_VERSION%
   TIMEOUT /T 3
 
-  @echo Downloading Energi3 Core Node
+  @echo Downloading Energi3 Core Node %GIT_VERSION% from repository
   set "S3URL=https://s3-us-west-2.amazonaws.com/download.energi.software/releases/energi3"
   set "GITURL=https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts"
   set "ICONURL=https://github.com/energicryptocurrency/energi3-provisioning/raw/master/scripts/windows/energi3.ico"
   
-  if exist "%ENERGI3_HOME%" (
-    move "%ENERGI3_HOME%" "%TMP_DIR%"
+  if exist "%BIN_DIR%\%EXE_NAME%" (
+    cd "%BIN_DIR%"
+    ren "%EXE_NAME%" "%EXE_NAME%.old"
   )
-  
+
   cd %TMP_DIR%
   @echo Downloading Energi3 Core Node Version: %GIT_VERSION%
   "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%S3URL%/%GIT_VERSION%/energi3-%GIT_VERSION%-windows-%ARCH%.zip" -O "%TMP_DIR%\energi3-%GIT_VERSION%-windows-%ARCH%.zip"
-  ::"%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%APPURL%?dl=1" -O "%BIN_DIR%\energi3.exe"
   
   "%TMP_DIR%\7za.exe" x energi3-%GIT_VERSION%-windows-%ARCH%.zip -y
-  ren energi3-%GIT_VERSION%-windows-%ARCH% "Energi Gen 3"
-  move "Energi Gen 3" "%ProgramFiles%\"
+  cd energi3-%GIT_VERSION%-windows-%ARCH%\bin
+  copy "%EXE_NAME%" "%BIN_DIR%"
   
-  if exist "%TMP_DIR%\Energi Gen 3.old" (
-	move "%TMP_DIR%\Energi Gen 3.old\start_staking.bat" "%BIN_DIR%\"
-	move "%TMP_DIR%\Energi Gen 3.old\start_mn.bat" "%BIN_DIR%\"
-	move "%TMP_DIR%\Energi Gen 3.old\js" "%ENERGI3_HOME%\"
-	move "%TMP_DIR%\Energi Gen 3.old\secure" "%ENERGI3_HOME%\"
+  if not exist "%BIN_DIR%\energi3.ico" (
+    @echo Downloading Energi3 icon
+    "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%ICONURL%?dl=1" -O "%BIN_DIR%\energi3.ico"
   )
-  
-  @echo Downloading Energi3 icon
-  "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%ICONURL%?dl=1" -O "%BIN_DIR%\energi3.ico"
 
   if not exist "%BIN_DIR%\start_staking.bat" (
     @echo Downloading staking batch script
@@ -353,18 +350,7 @@ del "%TMP_DIR%\CreateShortcut.vbs"
 :utilCleanup
   @echo Cleanup utilities files downloaded for setup from %TMP_DIR%
   :: TIMEOUT /T 3
-  del "%TMP_DIR%\7za.exe"
-  del "%TMP_DIR%\util.7z"
-  del "%TMP_DIR%\grep.exe"
-  del "%TMP_DIR%\libeay32.dll"
-  del "%TMP_DIR%\libiconv2.dll"
-  del "%TMP_DIR%\libintl3.dll"
-  del "%TMP_DIR%\libssl32.dll"
-  del "%TMP_DIR%\pcre3.dll"
-  del "%TMP_DIR%\regex2.dll"
-  del "%TMP_DIR%\wget.exe"
-  del "%TMP_DIR%\jq.exe"
-  del "%TMP_DIR%\energi3-%GIT_VERSION%-windows-%ARCH%.zip"
+  del %BIN_DIR%\%EXE_NAME%.old
   rmdir /s /q "%TMP_DIR%"
 
 :: Set keystore password
