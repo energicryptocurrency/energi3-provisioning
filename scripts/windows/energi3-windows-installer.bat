@@ -290,6 +290,11 @@ exit /b
     "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%GITURL%/utils/utils.js?dl=1" -O "%JS_DIR%\utils.js"
   )
   
+  if not exist "%CONF_DIR%\keystore\" (
+    @echo Creating %CONF_DIR%\keystore directory
+    md "%CONF_DIR%\keystore"
+  )
+  
   cd "%BIN_DIR%"
   goto :bootstrap
 
