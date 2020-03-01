@@ -8,6 +8,10 @@
 :: Desc: Batch script to download and setup Energi 3.x on Windows PC.
 ::       The script will upgrade an existing installation.
 ::
+:: Version:
+::       1.0.0   ZA Initial Script
+::       1.2.3   ZA Bug Fixes and Enhancements
+::
 :: Download and run the batch script to:
 :: explorer.exe https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/windows/energi3-windows-installer.bat
 ::####################################################################
@@ -23,28 +27,38 @@ set /p osarch= < "%userprofile%\osarchitecture.txt"
 del "%userprofile%\osarchitecture.txt"
 :: remove whitespace
 set osarch=%osarch: =%
-if "%osarch%" NEQ "64-bit" (
-  @echo "Windows x86 %osarch% is not supported"
-  exit /b
+if "%osarch%" == "64-bit" (
+  @echo "Windows x86 %osarch% is supported"
+  set "ARCH=amd64"
+  goto :setpath
+)
+if "%osarch%" == "32-bit" (
+  @echo "Windows x86 %osarch% is supported"
+  set "ARCH=i686"
+  goto :setpath
 )
 
+@echo "Windows x86 %osarch% is not supported"
+exit /b
+
+
 :: Set PATH variable
-::set "PATH=%PATH;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;%windir%\system32;%windir%;%windir%\System32\Wbem;%windir%\System32\WindowsPowerShell\v1.0\;%userprofile%\AppData\Local\Microsoft\WindowsApps"
+:setpath
 set "PATH=%windir%\system32;%windir%;%windir%\System32\Wbem;%windir%\System32\WindowsPowerShell\v1.0\;%windir%\System32\OpenSSH\;%userprofile%\AppData\Local\Microsoft\WindowsApps;%PATH%"
 
 :: Set Default Install Directory
 set "ENERGI3_HOME=%ProgramFiles%\Energi Gen 3"
 
-@echo Enter Full Path where you want to install Energi3 Node.
-:checkhome
-  set "CHK_HOME=Y"
-  set /p ENERGI3_HOME="Enter Install Path (Default: %ENERGI3_HOME%): "
-  set /p CHK_HOME="Is Install path correct: %ENERGI3_HOME% (Y/n): "
-  if /I not "%CHK_HOME%" == "Y" goto :checkhome
+::@echo Enter Full Path where you want to install Energi3 Node.
+:: :checkhome
+::  set "CHK_HOME=Y"
+::  set /p ENERGI3_HOME="Enter Install Path (Default: %ENERGI3_HOME%): "
+::  set /p CHK_HOME="Is Install path correct: %ENERGI3_HOME% (Y/n): "
+::  if /I not "%CHK_HOME%" == "Y" goto :checkhome
 
-@echo Energi Node v3.x will be installed in %ENERGI3_HOME%
+@echo Energi Core Node will be installed in %ENERGI3_HOME%
 
-setx "PATH=%PATH%;%ENERGI3_HOME%\bin"
+setx PATH "%PATH%;%ENERGI3_HOME%\bin"
 
 :: Confirm Mainnet or Testnet
 :setNetwork
@@ -75,10 +89,6 @@ set "CONF_DIR=%userprofile%\AppData\Roaming\%DATA_DIR%"
 set "EXE_NAME=energi3.exe"
 set "DATA_CONF=energi3.toml"
 
-:: Bootstrap Settings
-:: set "BLK_HASH=gsaqiry3h1ho3nh"
-:: set BOOTSTRAP_URL="https://www.dropbox.com/s/%BLK_HASH%/blocks_n_chains.tar.gz"
-
 :: Save location of current working directory
 @echo Get Current Working Directory.
 cd > dir.tmp
@@ -108,14 +118,11 @@ if exist "%TMP_DIR%\util.7z" (
 )
 
 :: runas with administrator TrustLevel
-runas /TrustLevel:0x30000 "bitsadmin /RESET /ALLUSERS"
-bitsadmin /TRANSFER DL7zipAndUtil /DOWNLOAD /PRIORITY FOREGROUND "https://www.dropbox.com/s/kqm6ki3j7kaauli/7za.exe?dl=1" "%TMP_DIR%\7za.exe"  "https://www.dropbox.com/s/x51dx1sg1m9wn7o/util.7z?dl=1" "%TMP_DIR%\util.7z"
-"%TMP_DIR%\7za.exe" x -y "%TMP_DIR%\util.7z" -o"%TMP_DIR%\"
-bitsadmin /TRANSFER DLwget /DOWNLOAD /PRIORITY FOREGROUND "https://eternallybored.org/misc/wget/1.20.3/64/wget.exe" "%TMP_DIR%\wget.exe"
+runas /TrustLevel:0x20000 "bitsadmin /RESET /ALLUSERS"
+bitsadmin /TRANSFER DL7zipAndUtil /DOWNLOAD /PRIORITY FOREGROUND "https://github.com/energicryptocurrency/energi3-provisioning/raw/master/scripts/thirdparty/7za.exe?dl=1" "%TMP_DIR%\7za.exe"  "https://github.com/energicryptocurrency/energi3-provisioning/raw/master/scripts/thirdparty/util.7z?dl=1" "%TMP_DIR%\util.7z"
+"%TMP_DIR%\7za.exe" x -y "%TMP_DIR%\util.7z" -o "%TMP_DIR%\"
 
-::certutil.exe -urlcache -split -f "https://www.dropbox.com/s/kqm6ki3j7kaauli/7za.exe?dl=1" "%TMP_DIR%\7za.exe"
-::certutil.exe -urlcache -split -f "https://eternallybored.org/misc/wget/1.20.3/64/wget.exe?dl=1" "%TMP_DIR%\wget.exe"
-::"%TMP_DIR%\7za.exe" x -y "%TMP_DIR%\wget.zip" -o"%TMP_DIR%\"
+bitsadmin /TRANSFER DLwget /DOWNLOAD /PRIORITY FOREGROUND "https://eternallybored.org/misc/wget/1.20.3/64/wget.exe" "%TMP_DIR%\wget.exe"
 
 @echo Downloading jq
 "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-win64.exe?dl=1" -O "%TMP_DIR%\jq.exe"
@@ -160,7 +167,7 @@ set GIT_VERSION=%GIT_VERSION:"=%
 set GIT_VERSION=%GIT_VERSION:,=%
 del "%TMP_DIR%\gitversion.tmp"
 
-type "%TMP_DIR%\gitversion.txt" | "%TMP_DIR%\jq.exe" -r ".assets | .[] | select(.name==\"energi3-windows-4.0-amd64.exe\") .browser_download_url" > "%TMP_DIR%\appurl.tmp"
+type "%TMP_DIR%\gitversion.txt" | "%TMP_DIR%\jq.exe" -r ".assets | .[] | select(.name==\"energi3-windows-4.0-%ARCH%.exe\") .browser_download_url" > "%TMP_DIR%\appurl.tmp"
 set /p APPURL= < "%TMP_DIR%\appurl.tmp"
 del "%TMP_DIR%\appurl.tmp"
 del "%TMP_DIR%\gitversion.txt"
@@ -238,18 +245,18 @@ exit /b
   
   cd %TMP_DIR%
   @echo Downloading Energi3 Core Node Version: %GIT_VERSION%
-  "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%S3URL%/%GIT_VERSION%/energi3-%GIT_VERSION%-windows-amd64-alltools.zip" -O "%TMP_DIR%\energi3-%GIT_VERSION%-windows-amd64-alltools.zip"
+  "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%S3URL%/%GIT_VERSION%/energi3-%GIT_VERSION%-windows-%ARCH%.zip" -O "%TMP_DIR%\energi3-%GIT_VERSION%-windows-%ARCH%.zip"
   ::"%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%APPURL%?dl=1" -O "%BIN_DIR%\energi3.exe"
   
-  "%TMP_DIR%\7za.exe" x energi3-%GIT_VERSION%-windows-amd64-alltools.zip -y
-  ren energi3-%GIT_VERSION%-windows-amd64 "Energi Gen 3"
-  move "Energi Gen 3" "%ProgramFiles%"
+  "%TMP_DIR%\7za.exe" x energi3-%GIT_VERSION%-windows-%ARCH%.zip -y
+  ren energi3-%GIT_VERSION%-windows-%ARCH% "Energi Gen 3"
+  move "Energi Gen 3" "%ProgramFiles%\"
   
   if exist "%TMP_DIR%\Energi Gen 3.old" (
-	move "%TMP_DIR%\Energi Gen 3.old\start_staking.bat" "%BIN_DIR%"
-	move "%TMP_DIR%\Energi Gen 3.old\start_mn.bat" "%BIN_DIR%"
-	move "%TMP_DIR%\Energi Gen 3.old\js" "%ENERGI3_HOME%"
-	move "%TMP_DIR%\Energi Gen 3.old\secure" "%ENERGI3_HOME%"
+	move "%TMP_DIR%\Energi Gen 3.old\start_staking.bat" "%BIN_DIR%\"
+	move "%TMP_DIR%\Energi Gen 3.old\start_mn.bat" "%BIN_DIR%\"
+	move "%TMP_DIR%\Energi Gen 3.old\js" "%ENERGI3_HOME%\"
+	move "%TMP_DIR%\Energi Gen 3.old\secure" "%ENERGI3_HOME%\"
   )
   
   @echo Downloading Energi3 icon
@@ -264,6 +271,11 @@ exit /b
     @echo Downloading masternode batch script
     "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%GITURL%/windows/start_mn.bat?dl=1" -O "%BIN_DIR%\start_mn.bat"
   )
+  
+  if not exist "%BIN_DIR%\energi3_ascii.txt" (
+    @echo Downloading Energi3 logo
+    "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%GITURL%/windows/energi3_ascii.txt?dl=1" -O "%BIN_DIR%\energi3_ascii.txt"
+  )
 
   if Not exist "%JS_DIR%\" (
     @echo Creating directory: %JS_DIR%
@@ -272,7 +284,7 @@ exit /b
   
   if not exist "%JS_DIR%\utils.js" (
     @echo Downloading utils.js JavaScript file
-    "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%GITURL%/js/utils.js?dl=1" -O "%JS_DIR%\utils.js"
+    "%TMP_DIR%\wget.exe" --no-check-certificate --progress=bar:force:noscroll "%GITURL%/utils/utils.js?dl=1" -O "%JS_DIR%\utils.js"
   )
   
   cd "%BIN_DIR%"
@@ -290,6 +302,10 @@ exit /b
 
 
 :bootstrap
+:: Bootstrap Settings
+:: set "BLK_HASH=gsaqiry3h1ho3nh"
+:: set BOOTSTRAP_URL="https://www.dropbox.com/s/%BLK_HASH%/blocks_n_chains.tar.gz"
+
 ::@echo Please wait for the snapshot to download.
 :: --no-check-certificate
 ::"%TMP_DIR%\wget.exe" -4q -o- "%BOOTSTRAP_URL%?dl=1" -O "%CONF_DIR%\blocks_n_chains.tar.gz"
@@ -308,7 +324,7 @@ exit /b
 
 :createshortcut
 @echo Set WshShell = WScript.CreateObject("WScript.Shell") > "%TMP_DIR%\CreateShortcut.vbs"
-@echo sLinkFile = "%userprofile%\Desktop\Energi3Stake.lnk" >> "%TMP_DIR%\CreateShortcut.vbs"
+@echo sLinkFile = "%userprofile%\Desktop\Energi Core Node.lnk" >> "%TMP_DIR%\CreateShortcut.vbs"
 @echo Set oMyShortCut = WshShell.CreateShortcut(sLinkFile) >> "%TMP_DIR%\CreateShortcut.vbs"
 @echo oMyShortcut.IconLocation = "%BIN_DIR%\energi3.ico" >> "%TMP_DIR%\CreateShortcut.vbs"
 if /I "%isMainnet%"=="Y" (
@@ -319,7 +335,7 @@ if /I "%isMainnet%"=="Y" (
 @echo oMyShortCut.WorkingDirectory = "%BIN_DIR%" >> "%TMP_DIR%\CreateShortcut.vbs"
 @echo oMyShortCut.Save >> "%TMP_DIR%\CreateShortcut.vbs"
 
-if not exist "%userprofile%\Desktop\Energi3Stake.lnk" (
+if not exist "%userprofile%\Desktop\Energi Core Node.lnk" (
   cscript "%TMP_DIR%\CreateShortcut.vbs"
   @echo Energi3 shortcut created on Desktop
   ) else (
@@ -342,34 +358,34 @@ del "%TMP_DIR%\CreateShortcut.vbs"
   del "%TMP_DIR%\regex2.dll"
   del "%TMP_DIR%\wget.exe"
   del "%TMP_DIR%\jq.exe"
-  del "%TMP_DIR%\energi3-%GIT_VERSION%-windows-amd64-alltools.zip"
+  del "%TMP_DIR%\energi3-%GIT_VERSION%-windows-%ARCH%.zip"
   rmdir /s /q "%TMP_DIR%"
 
 :: Set keystore password
-if not exist "%PW_DIR%\securefile.txt" (
-  set "SETPWD=N"
-  @echo You can set password of your keystore account for automated start of staking/mining.
-  @echo It will create a secure/hidden file with the password.
-  set /p SETPWD="Do you want to save your password? (y/N): "
-  if /I "%SETPWD%" == "Y" (
-    if Not exist "%PW_DIR%\" (
-      @echo Creating hidden directory: %PW_DIR%
-      md "%PW_DIR%"
-      attrib +r +h +s "%PW_DIR%"
-    )
-    cd "%PW_DIR%"
-    :setpassword
-    set /p ACCTPASSWD1="Enter your keystore account password: "
-    set /p ACCTPASSWD2="Re-enter your keystore account password: "
-    if "%ACCTPASSWD1%" NEQ "%ACCTPASSWD2%" (
-      @echo Passwords do not match. Try again.
-      goto :setpassword
-    )
-    echo Password is %ACCTPASSWD1%
-    echo %ACCTPASSWD1% 1> securefile.txt
-    attrib +r "%PW_DIR%\securefile.txt"
-  )
-)
+::if not exist "%PW_DIR%\securefile.txt" (
+::  set "SETPWD=N"
+::  @echo You can set password of your keystore account for automated start of staking/mining.
+::  @echo It will create a secure/hidden file with the password.
+::  set /p SETPWD="Do you want to save your password? (y/N): "
+::  if /I "%SETPWD%" == "Y" (
+::    if Not exist "%PW_DIR%\" (
+::      @echo Creating hidden directory: %PW_DIR%
+::      md "%PW_DIR%"
+::      attrib +r +h +s "%PW_DIR%"
+::    )
+::    cd "%PW_DIR%"
+::    :setpassword
+::    set /p ACCTPASSWD1="Enter your keystore account password: "
+::    set /p ACCTPASSWD2="Re-enter your keystore account password: "
+::    if "%ACCTPASSWD1%" NEQ "%ACCTPASSWD2%" (
+::      @echo Passwords do not match. Try again.
+::      goto :setpassword
+::    )
+::    echo Password is %ACCTPASSWD1%
+::    echo %ACCTPASSWD1% 1> securefile.txt
+::    attrib +r "%PW_DIR%\securefile.txt"
+::  )
+::)
 
 @echo Move back to Initial Working Directory.
 cd "%mycwd%"
@@ -389,34 +405,16 @@ color 0A
 cls
 @echo.
 @echo.
-::@echo       ___
-::@echo      /\  \
-::@echo     /::\  \
-::@echo    /:/\:\__\
-::@echo   /:/ /:/ _/_
-::@echo  /:/ /:/ /\__\  ______ _   _ ______ _____   _____ _____ ____  
-::@echo  \:\ \/ /:/  / |  ____| \ | |  ____|  __ \ / ____|_   _|___ \ 
-::@echo   \:\  /:/  /  | |__  |  \| | |__  | |__) | |  __  | |   __) |
-::@echo    \:\/:/  /   |  __| | . ` |  __| |  _  /| | |_ | | |  |__ < 
-::@echo     \::/  /    | |____| |\  | |____| | \ \| |__| |_| |_ ___) |
-::@echo      \/__/     |______|_| \_|______|_|  \_\\_____|_____|____/ 
-::@echo.
+type "%BIN_DIR%\energi3_ascii.txt"
 @echo.
 color 0F
 @echo Congratulations! Energi Node Version %GIT_VERSION% is installed on this computer
 @echo.
 @echo Install directory is: %ENERGI3_HOME%
 @echo.
-if /I "%isMainnet%" == "y" (
-  @echo Start Mainnet application: %ENERGI3_HOME%\bin\energi3 console
-  ) else (
-  @echo Start Testnet application: %ENERGI3_HOME%\bin\energi3 --testnet console
-  )
-@echo.
-@echo Run one of the following scripts after updating parameters:
-@echo Staking script:    %ENERGI3_HOME%\bin\start_staking.bat
-@echo Masternode script: %ENERGI3_HOME%\bin\start_mn.bat
+@echo To start Energi Core Node, double-clicking on the "Energi Core Node" shortcut on the Desktop.
 @echo.
 
 
 :: End batch script
+cmd.exe /k cmd /c
