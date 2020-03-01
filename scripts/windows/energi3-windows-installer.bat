@@ -104,6 +104,18 @@ if Not exist "%TMP_DIR%\" (
 :: Add Application specific PATH
 set "PATH=%PATH%;%BIN_DIR%;%TMP_DIR%"
 
+::stop energi3 console if running
+:stopEnergi3
+FOR /F %%x IN ('tasklist /NH /FI "IMAGENAME eq %EXE_NAME%"') DO IF %%x == %EXE_NAME% goto ENERGI3RUNNING
+echo %EXE_NAME% is not running
+goto endStopEnergi3
+:ENERGI3RUNNING
+echo Stopping "%EXE_NAME%"
+  TIMEOUT /T 5
+Taskkill /F /IM  "%EXE_NAME%"
+:endStopEnergi3
+
+
 :: Download utilities
 :downloadutils
 @echo Changing to the %TMP_DIR% folder.
@@ -121,7 +133,6 @@ if exist "%TMP_DIR%\util.7z" (
 runas /TrustLevel:0x20000 "bitsadmin /RESET /ALLUSERS"
 bitsadmin /TRANSFER DL7zipAndUtil /DOWNLOAD /PRIORITY FOREGROUND "https://github.com/energicryptocurrency/energi3-provisioning/raw/master/scripts/thirdparty/7za.exe?dl=1" "%TMP_DIR%\7za.exe"  "https://github.com/energicryptocurrency/energi3-provisioning/raw/master/scripts/thirdparty/util.7z?dl=1" "%TMP_DIR%\util.7z"
 "%TMP_DIR%\7za.exe" x -y "%TMP_DIR%\util.7z" -o "%TMP_DIR%\"
-
 bitsadmin /TRANSFER DLwget /DOWNLOAD /PRIORITY FOREGROUND "https://eternallybored.org/misc/wget/1.20.3/64/wget.exe" "%TMP_DIR%\wget.exe"
 
 @echo Downloading jq
@@ -141,15 +152,10 @@ if exist "%BIN_DIR%\%EXE_NAME%" (
   set "NEWINSTALL=Y"
   goto :CHECKGITVER
 )
-pause
+
+
 :: Set for script testing
 ::set "RUN_VERSION=0.5.5"
-
-:: Check latest release version available from Github
-:: https://api.github.com/repos/energicryptocurrency/energi3/releases/latest
-:: tag_name
-:: browser_download_url
-
 
 :CHECKGITVER
 cd "%TMP_DIR%"
