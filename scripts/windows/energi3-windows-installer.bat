@@ -30,21 +30,18 @@ set osarch=%osarch: =%
 if "%osarch%" == "64-bit" (
   @echo "Windows x86 %osarch% is supported"
   set "ARCH=amd64"
-  goto :setpath
+  goto :doneSysCheck
 )
 if "%osarch%" == "32-bit" (
   @echo "Windows x86 %osarch% is supported"
   set "ARCH=i686"
-  goto :setpath
+  goto :doneSysCheck
 )
 
 @echo "Windows x86 %osarch% is not supported"
 exit /b
 
-
-:: Set PATH variable
-:setpath
-set "PATH=%windir%\system32;%windir%;%windir%\System32\Wbem;%windir%\System32\WindowsPowerShell\v1.0\;%windir%\System32\OpenSSH\;%userprofile%\AppData\Local\Microsoft\WindowsApps;%PATH%"
+:doneSysCheck
 
 :: Set Default Install Directory
 set "ENERGI3_HOME=%ProgramFiles%\Energi Gen 3"
@@ -57,8 +54,6 @@ set "ENERGI3_HOME=%ProgramFiles%\Energi Gen 3"
 ::  if /I not "%CHK_HOME%" == "Y" goto :checkhome
 
 @echo Energi Core Node will be installed in %ENERGI3_HOME%
-
-setx PATH "%PATH%;%ENERGI3_HOME%\bin"
 
 :: Confirm Mainnet or Testnet
 :setNetwork
@@ -102,19 +97,20 @@ if Not exist "%TMP_DIR%\" (
 )
 
 :: Add Application specific PATH
-set "PATH=%PATH%;%BIN_DIR%;%TMP_DIR%"
+setx PATH "%windir%\System32\OpenSSH\;%userprofile%\AppData\Local\Microsoft\WindowsApps;%PATH%"
+setx PATH "%windir%\system32;%windir%;%windir%\System32\Wbem;%windir%\System32\WindowsPowerShell\v1.0\;%PATH%"
+setx PATH "%PATH%;%BIN_DIR%;%TMP_DIR%"
 
 ::stop energi3 console if running
 :stopEnergi3
-FOR /F %%x IN ('tasklist /NH /FI "IMAGENAME eq %EXE_NAME%"') DO IF %%x == %EXE_NAME% goto ENERGI3RUNNING
+FOR /F %%x IN ('tasklist /NH /FI "IMAGENAME eq %EXE_NAME%"') DO IF %%x == %EXE_NAME% goto Energi3Running
 echo %EXE_NAME% is not running
 goto endStopEnergi3
-:ENERGI3RUNNING
+:Energi3Running
 echo Stopping "%EXE_NAME%"
-  TIMEOUT /T 5
+TIMEOUT /T 5
 Taskkill /F /IM  "%EXE_NAME%"
 :endStopEnergi3
-
 
 :: Download utilities
 :downloadutils
@@ -162,11 +158,6 @@ if exist "%BIN_DIR%\%EXE_NAME%" (
 cd "%TMP_DIR%"
 curl -o "%TMP_DIR%\gitversion.txt" "https://api.github.com/repos/energicryptocurrency/energi3/releases/latest" 
 
-:: set "GIT_VERSION="
-::  FOR /f "tokens=1*delims=: " %%a IN ( gitversion.txt ) DO (
-::   IF %%a=="tag_name" SET GIT_VERSION=%%b
-::  )
-  
 type "%TMP_DIR%\gitversion.txt" | "%TMP_DIR%\jq.exe" -r .tag_name > "%TMP_DIR%\gitversion.tmp"
 set /p GIT_VERSION= < "%TMP_DIR%\gitversion.tmp"
 set GIT_VERSION=%GIT_VERSION:v=%
@@ -258,7 +249,15 @@ exit /b
   
   "%TMP_DIR%\7za.exe" x energi3-%GIT_VERSION%-windows-%ARCH%.zip -y
   cd energi3-%GIT_VERSION%-windows-%ARCH%\bin
-  copy "%EXE_NAME%" "%BIN_DIR%"
+  
+  
+  if exist "%BIN_DIR%\" (
+    copy "%EXE_NAME%" "%BIN_DIR%"
+  ) else (
+    md "%BIN_DIR%"
+    copy "%EXE_NAME%" "%BIN_DIR%"
+  
+  )
   
   if not exist "%BIN_DIR%\energi3.ico" (
     @echo Downloading Energi3 icon
