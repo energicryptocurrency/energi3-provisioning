@@ -39,10 +39,9 @@ if not exist %LOG_DIR% (
   )
 
 :: Find Internet facing IP address
-curl -s https://ifconfig.me/ > ipaddr.tmp
-set /p IP= < ipaddr.tmp
-del ipaddr.tmp
-
+curl -s https://ifconfig.me/ > %TEMP%\ipaddr.tmp
+set /p IP= < %TEMP%\ipaddr.tmp
+del %TEMP%\ipaddr.tmp
 
 ::
 :: Main start script
