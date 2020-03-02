@@ -296,6 +296,7 @@ _install_energi3 () {
   cd ${USRHOME}
   # Pull energi3 from Amazon S3
   curl -fsSL "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-macos-amd64.tgz" --output energi3-${GIT_LATEST}-macos-amd64.tgz
+  
   #wget -4qo- "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-macos-amd64-alltools.tgz" --show-progress --progress=bar:force:noscroll 2>&1
   #wget -4qo- "${BIN_URL}" -O "${ENERGI3_EXE}" --show-progress --progress=bar:force:noscroll 2>&1
   sleep 0.3
@@ -473,18 +474,21 @@ _add_shortcut () {
   
   if [[ ! -f "${HOME}/Desktop/${SHORTCUTNAME}" ]]
   then
-  echo
-  echo "Adding shortcut to the Destop"
-  cat << ENERGI3_SHORTCUT | tee "${HOME}/Desktop/${SHORTCUTNAME}" >/dev/null
-#!/bin/bash
-
-# Start Energi Core Node
-open ${HOME}/energi3/bin/start_node.sh
-
-ENERGI3_SHORTCUT
-
-  chmod 755 "${HOME}/Desktop/${SHORTCUTNAME}"
-  
+    echo
+    echo "Adding shortcut to the Destop"
+    cd "${HOME}/Desktop"
+    cp "${BIN_DIR}/start_node.sh" "${HOME}/Desktop/${SHORTCUTNAME}"
+    
+    curl -fsSL  https://github.com/energicryptocurrency/energi3-provisioning/raw/master/scripts/macos/energi3.png --output energi3.png
+    if [ ! -x "${ETC_DIR}/set-image.py" ]
+    then
+      curl -sL "${SCRIPT_URL}/set-image.py" --output "${ETC_DIR}/set-image.py"
+      chmod 755 "${ETC_DIR}/set-image.py"
+    fi
+    "${ETC_DIR}/set-image.py" energi3.png "${HOME}/Desktop/${SHORTCUTNAME}"
+    chmod 755 "${HOME}/Desktop/${SHORTCUTNAME}"
+    rm energi3.png
+    cd -
   fi
 
 }
