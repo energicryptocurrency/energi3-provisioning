@@ -9,7 +9,7 @@
 #         script will upgrade an existing installation.
 # 
 # Version:
-#   1.2.0 20200226 ZA Initial Script
+#   1.2.3 20200302 ZA Initial Script
 #
 : '
 # Run the script to get started:
@@ -158,7 +158,7 @@ _check_install () {
   USRNAME=`whoami`
   cd
   export USRHOME=`pwd`
-  export ENERGI3_HOME=${USRHOME}/energi3
+  export ENERGI3_HOME="${USRHOME}/energi3"
   
   case ${V3USRCOUNT} in
   
@@ -271,7 +271,7 @@ _install_energi3 () {
   # Download and install node software and supporting scripts
 
   # Name of scripts
-  NODE_SCRIPT=start_staking.sh
+  NODE_SCRIPT=start_node.sh
   MN_SCRIPT=start_mn.sh
   JS_SCRIPT=utils.js
   #NODE_SCRIPT=run_macos.sh
@@ -292,29 +292,31 @@ _install_energi3 () {
  
   # Download from repositogy
   echo "Downloading Energi Core Node and scripts"
-  if [ -d ${ENERGI3_HOME} ]
-  then
-    mv ${ENERGI3_HOME} ${ENERGI3_HOME}.old
-  fi 
   
   cd ${USRHOME}
   # Pull energi3 from Amazon S3
-  curl -fsSL "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-macos-amd64-alltools.tgz" --output energi3-${GIT_LATEST}-macos-amd64-alltools.tgz
+  curl -fsSL "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-macos-amd64.tgz" --output energi3-${GIT_LATEST}-macos-amd64.tgz
   #wget -4qo- "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-macos-amd64-alltools.tgz" --show-progress --progress=bar:force:noscroll 2>&1
   #wget -4qo- "${BIN_URL}" -O "${ENERGI3_EXE}" --show-progress --progress=bar:force:noscroll 2>&1
   sleep 0.3
   
-  tar xvfz energi3-${GIT_LATEST}-macos-amd64-alltools.tgz
+  tar xvfz energi3-${GIT_LATEST}-macos-amd64.tgz
   sleep 0.3
   
-  # Rename directory
-  mv energi3-${GIT_LATEST}-macos-amd64 energi3
-  rm energi3-${GIT_LATEST}-macos-amd64-alltools.tgz
+  # Copy latest energi3 and cleanup
+  if [[ -x "${ENERGI3_EXE}" ]]
+  then
+    mv energi3-${GIT_LATEST}-macos-amd64/bin/energi3 ${BIN_DIR}/.
+    rm -rf energi3-${GIT_LATEST}-macos-amd64
+  else
+    mv energi3-${GIT_LATEST}-macos-amd64 ${ENERGI3_HOME}
+  fi
+  rm energi3-${GIT_LATEST}-macos-amd64.tgz
   
   # Check if software downloaded
   if [ ! -d ${BIN_DIR} ]
   then
-    echo "${RED}ERROR: energi3-${GIT_LATEST}-linux-amd64-alltools.tgz did not download${NC}"
+    echo "${RED}ERROR: energi3-${GIT_LATEST}-linux-amd64.tgz did not download${NC}"
     sleep 5
   fi
   
@@ -329,10 +331,8 @@ _install_energi3 () {
     chown ${USRNAME}:${USRNAME} ${ENERGI3_EXE}
   fi    
   
-  if [ -f "${ENERGI3_HOME}.old/bin/${NODE_SCRIPT}" ]
+  if [ ! -f "${BIN_DIR}/${NODE_SCRIPT}" ]
   then
-    mv "${ENERGI3_HOME}.old/bin/${NODE_SCRIPT}" "${ENERGI3_HOME}/bin/${NODE_SCRIPT}"
-  else
     curl -sL "${SCRIPT_URL}/${NODE_SCRIPT}" --output ${NODE_SCRIPT}
     #wget -4qo- "${SCRIPT_URL}/${NODE_SCRIPT}?dl=1" -O "${NODE_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
     sleep 0.3
@@ -343,10 +343,8 @@ _install_energi3 () {
     fi
   fi
 
-  if [ -f "${ENERGI3_HOME}.old/bin/${MN_SCRIPT}" ]
+  if [ ! -f "${BIN_DIR}/${MN_SCRIPT}" ]
   then
-    mv "${ENERGI3_HOME}.old/bin/${MN_SCRIPT}" "${ENERGI3_HOME}/bin/${MN_SCRIPT}"
-  else
     curl -sL "${SCRIPT_URL}/${MN_SCRIPT}" --output ${MN_SCRIPT}
     #wget -4qo- "${SCRIPT_URL}/${MN_SCRIPT}?dl=1" -O "${MN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
     sleep 0.3
@@ -363,10 +361,8 @@ _install_energi3 () {
     mkdir -p ${JS_DIR}
   fi  
   cd ${JS_DIR}
-  if [ -f "${ENERGI3_HOME}.old/js/${JS_SCRIPT}" ]
+  if [ ! -f "${JS_DIR}/${JS_SCRIPT}" ]
   then
-    mv ${ENERGI3_HOME}.old/js/${JS_SCRIPT} ${JS_SCRIPT}
-  else
     curl -sL "${BASE_URL}/utils/${JS_SCRIPT}" --output ${JS_SCRIPT}
     #wget -4qo- "${BASE_URL}/utils/${JS_SCRIPT}?dl=1" -O "${JS_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
     sleep 0.3
@@ -376,9 +372,6 @@ _install_energi3 () {
       chown ${USRNAME}:${USRNAME} ${JS_SCRIPT}
     fi
   fi
-  
-  # Clean-up
-  rm -rf ${ENERGI3_HOME}.old
   
   # Change to install directory
   cd
@@ -443,9 +436,11 @@ _copy_keystore() {
   then
     clear
     echo
-    echo "Copy the Gen 3 address file into the keystore directory.  You can open it by doing the following:"
+    echo "Copy the Gen 3 address file into the keystore directory by doing the following:"
     echo
-    echo "Finder -> Menubar (top of screen) -> Go -> Utilities, open Terminal, type/paste in "
+    echo "Finder -> Menubar (top of screen) -> Go -> Utilities, open Terminal"
+    echo "Type or paste in "
+    echo
     echo "open \"${HOME}/Library/EnergiCore3/keystore\" "
     echo
     read -t 10 -p "Wait 10 sec or Press [ENTER] key to continue..."
@@ -468,6 +463,29 @@ _stop_energi3 () {
   
   ENERGI3PID=`ps -ef | grep energi3 | grep console | grep -v "grep energi3" | grep -v "color=auto" | awk '{print $2}' `
     
+
+}
+
+_add_shortcut () {
+
+  # Add shorcut to Desktop
+  SHORTCUTNAME="Energi Core Node".command
+  
+  if [[ ! -f "${HOME}/Desktop/${SHORTCUTNAME}" ]]
+  then
+  echo
+  echo "Adding shortcut to the Destop"
+  cat << ENERGI3_SHORTCUT | tee "${HOME}/Desktop/${SHORTCUTNAME}" >/dev/null
+#!/bin/bash
+
+# Start Energi Core Node
+open ${HOME}/energi3/bin/start_node.sh
+
+ENERGI3_SHORTCUT
+
+  chmod 755 "${HOME}/Desktop/${SHORTCUTNAME}"
+  
+  fi
 
 }
 
@@ -695,9 +713,9 @@ _end_instructions () {
  \:\ \/ /:/  /
 ENERGI3
 echo "${GREEN}  \:\  /:/  /  ${NC}Thank you for supporting Energi! Good luck staking."
-echo "${GREEN}   \:\/:/  /   ${NC}Run the following script to start/stop the Node:"
-echo "${GREEN}    \::/  /    ${NC}- start_staking.sh  Script to start staking"
-echo "${GREEN}     \/__/     ${NC}- start_mn.sh       Script to start masternode"
+echo "${GREEN}   \:\/:/  /   ${NC}"
+echo "${GREEN}    \::/  /    ${NC}To start Energi Core Node, double-clicking on the"
+echo "${GREEN}     \/__/     ${NC}\"Energi Core Node\" shortcut on the Desktop."
 echo ${NC}
 echo "For instructions visit: ${DOC_URL}"
 echo
@@ -825,6 +843,7 @@ case ${INSTALLTYPE} in
       a)
         # New server installation of Energi3
         _install_energi3
+        _add_shortcut
         _copy_keystore
         
         ;;
@@ -879,6 +898,7 @@ case ${INSTALLTYPE} in
       a)
         # Upgrade version of Energi3
         _upgrade_energi3
+        _add_shortcut
         
         ;;
       
