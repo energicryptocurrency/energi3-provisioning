@@ -10,7 +10,7 @@
 ::
 :: Version:
 ::       1.0.0   ZA Initial Script
-::       1.2.3   ZA Bug Fixes and Enhancements
+::       1.2.4   ZA Bug Fixes and Enhancements
 ::
 :: Download and run the batch script to:
 :: explorer.exe https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/windows/energi3-windows-installer.bat
@@ -138,11 +138,20 @@ bitsadmin /TRANSFER DLwget /DOWNLOAD /PRIORITY FOREGROUND "https://eternallybore
 if exist "%BIN_DIR%\%EXE_NAME%" (
   cd "%BIN_DIR%"
   set "RUN_VERSION="
-  FOR /f "tokens=1*delims=: " %%a IN ('"%BIN_DIR%\%EXE_NAME%" version ') DO (
-   IF "%%a"=="Version" SET "RUN_VERSION=%%b"
+  FOR /f "tokens=1* delims=: " %%a IN ('"%BIN_DIR%\%EXE_NAME%" version ') DO (
+    SET "RUN_VERSION=%%b
+    IF "%%a" == "Version" goto SetRunVersion
   )
+)
+
+  @echo Cannot determine version of installed energi3.exe
+  exit /b
+  
+  :SetRunVersion
+
   set RUN_VERSION=%RUN_VERSION:-=&rem.%
   @echo Current version of Energi3 installed: %RUN_VERSION%
+  pause
   TIMEOUT /T 5
 ) else (
   @echo Energi3 is not installed in %BIN_DIR% of this computer.
@@ -180,6 +189,7 @@ exit /b
 
 :testVersions  version1  version2
 call :compareVersions %1 %2
+pause
 if %errorlevel% == 1 goto :NEWVERSION
 if %errorlevel% == -1 goto :OLDVERSION
 if %errorlevel% == 0 goto :SAMEVERSION
@@ -249,7 +259,7 @@ exit /b
   
   "%TMP_DIR%\7za.exe" x energi3-%GIT_VERSION%-windows-%ARCH%.zip -y
   cd energi3-%GIT_VERSION%-windows-%ARCH%\bin
-  
+
   
   if exist "%BIN_DIR%\" (
     copy "%EXE_NAME%" "%BIN_DIR%"
