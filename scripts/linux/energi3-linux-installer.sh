@@ -11,7 +11,7 @@
 #         from v2 to v3.
 # 
 # Version:
-#   1.2.0 20200226 ZA Initial Script
+#   1.2.5 20200303 ZA Initial Script
 #
 : '
 # Run the script to get started:
@@ -601,20 +601,36 @@ _add_systemd () {
   then
     echo "Setting up systemctl to automatically start energi3 after reboot..."
     sleep 0.3
-    
+    EXTIP=`curl -s https://ifconfig.me/`
     cat << SYSTEMD_CONF | ${SUDO} tee /lib/systemd/system/energi3.service >/dev/null
 [Unit]
-Description=Energi3 Start Service
+Description=Energi Core Node Service
 After=syslog.target network.target
 
 [Service]
-SyslogIdentifier=cftimer-test-energi3
-Restart=no
+SyslogIdentifier=energi3
+Type=simple
+Restart=always
 RestartSec=5
 User=${USRNAME}
 Group=${USRNAME}
 UMask=0027
-ExecStart=/usr/bin/screen -S energi3 run_mn_linux.sh
+ExecStart=${BIN_DIR}/energi3 \
+          --datadir ${CONF_DIR} \
+          --masternode \
+          --mine \
+          --nat extip:${EXTIP} \
+          --miner.autocollateralize 0 \
+          --preload ${JS_DIR}/utils.js \
+          --rpc \
+          --rpcport 39796 \
+          --rpcaddr "127.0.0.1"  \
+          --rpcapi admin,eth,web3,rpc,personal,energi \
+          --ws \
+          --wsaddr "127.0.0.1" \
+          --wsport 39795 \
+          --wsapi admin,eth,net,web3,personal,energi \
+          --verbosity 0
 WorkingDirectory=${USRHOME}
 
 [Install]
@@ -653,28 +669,37 @@ _install_energi3 () {
  
   # Download from repositogy
   echo "Downloading Energi Core Node and scripts"
-  if [ -d ${ENERGI3_HOME} ]
-  then
-    mv ${ENERGI3_HOME} ${ENERGI3_HOME}.old
-  fi
   
   cd ${USRHOME}
   # Pull energi3 from Amazon S3
-  wget -4qo- "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-linux-amd64-alltools.tgz" --show-progress --progress=bar:force:noscroll 2>&1
+  wget -4qo- "${S3URL}/${GIT_LATEST}/energi3-${GIT_LATEST}-linux-amd64.tgz" --show-progress --progress=bar:force:noscroll 2>&1
   #wget -4qo- "${BIN_URL}" -O "${ENERGI3_EXE}" --show-progress --progress=bar:force:noscroll 2>&1
   sleep 0.3
   
-  tar xvfz energi3-${GIT_LATEST}-linux-amd64-alltools.tgz
+  tar xvfz energi3-${GIT_LATEST}-linux-amd64.tgz
   sleep 0.3
   
-  # Rename directory
-  mv energi3-${GIT_LATEST}-linux-amd64 energi3
-  rm energi3-${GIT_LATEST}-linux-amd64-alltools.tgz
+  # Copy latest energi3 and cleanup
+  if [[ -x "${ENERGI3_EXE}" ]]
+  then
+    mv energi3-${GIT_LATEST}-linux-amd64/bin/energi3 ${BIN_DIR}/.
+    rm -rf energi3-${GIT_LATEST}-linux-amd64
+  else
+    mv energi3-${GIT_LATEST}-linux-amd64 ${ENERGI3_HOME}
+  fi
+  rm energi3-${GIT_LATEST}-linux-amd64.tgz
   
   # Check if software downloaded
   if [ ! -d ${BIN_DIR} ]
   then
-    echo "${RED}ERROR: energi3-${GIT_LATEST}-linux-amd64-alltools.tgz did not download${NC}"
+    echo "${RED}ERROR: energi3-${GIT_LATEST}-linux-amd64.tgz did not download${NC}"
+    sleep 5
+  fi
+  
+  # Check if software downloaded
+  if [ ! -d ${BIN_DIR} ]
+  then
+    echo "${RED}ERROR: energi3-${GIT_LATEST}-linux-amd64.tgz did not download${NC}"
     sleep 5
   fi
   
@@ -690,10 +715,8 @@ _install_energi3 () {
     chown ${USRNAME}:${USRNAME} ${ENERGI3_EXE}
   fi    
   
-  if [ -f "${ENERGI3_HOME}.old/bin/${NODE_SCRIPT}" ]
+  if [ -f "${BIN_DIR}/${NODE_SCRIPT}" ]
   then
-    mv "${ENERGI3_HOME}.old/bin/${NODE_SCRIPT}" "${ENERGI3_HOME}/bin/${NODE_SCRIPT}"
-  else
     wget -4qo- "${SCRIPT_URL}/${NODE_SCRIPT}?dl=1" -O "${NODE_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
     sleep 0.3
     chmod 755 ${NODE_SCRIPT}
@@ -703,10 +726,8 @@ _install_energi3 () {
     fi
   fi
 
-  if [ -f "${ENERGI3_HOME}.old/bin/${NODE_SCREEN_SCRIPT}" ]
+  if [ -f "${BIN_DIR}/${NODE_SCREEN_SCRIPT}" ]
   then
-    mv "${ENERGI3_HOME}.old/bin/${NODE_SCREEN_SCRIPT}" "${ENERGI3_HOME}/bin/${NODE_SCREEN_SCRIPT}"
-  else
     wget -4qo- "${SCRIPT_URL}/${NODE_SCREEN_SCRIPT}?dl=1" -O "${NODE_SCREEN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
     sleep 0.3
     chmod 755 ${NODE_SCREEN_SCRIPT}
@@ -716,10 +737,8 @@ _install_energi3 () {
     fi
   fi
 
-  if [ -f "${ENERGI3_HOME}.old/bin/${MN_SCRIPT}" ]
+  if [ -f "${BIN_DIR}/${MN_SCRIPT}" ]
   then
-    mv "${ENERGI3_HOME}.old/bin/${MN_SCRIPT}" "${ENERGI3_HOME}/bin/${MN_SCRIPT}"
-  else
     wget -4qo- "${SCRIPT_URL}/${MN_SCRIPT}?dl=1" -O "${MN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
     sleep 0.3
     chmod 755 ${MN_SCRIPT}
@@ -729,10 +748,8 @@ _install_energi3 () {
     fi
   fi
 
-  if [ -f "${ENERGI3_HOME}.old/bin/${MN_SCREEN_SCRIPT}" ]
+  if [ -f "{BIN_DIR}/${MN_SCREEN_SCRIPT}" ]
   then
-    mv "${ENERGI3_HOME}.old/bin/${MN_SCREEN_SCRIPT}" "${ENERGI3_HOME}/bin/${MN_SCREEN_SCRIPT}"
-  else
     wget -4qo- "${SCRIPT_URL}/${MN_SCREEN_SCRIPT}?dl=1" -O "${MN_SCREEN_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
     sleep 0.3
     chmod 755 ${MN_SCREEN_SCRIPT}
@@ -747,11 +764,10 @@ _install_energi3 () {
     echo "    Creating directory: ${JS_DIR}"
     mkdir -p ${JS_DIR}
   fi  
+  
   cd ${JS_DIR}
-  if [ -f "${ENERGI3_HOME}.old/js/${JS_SCRIPT}" ]
+  if [ -f "$${JS_DIR}/${JS_SCRIPT}" ]
   then
-    mv ${ENERGI3_HOME}.old/js/${JS_SCRIPT} ${JS_SCRIPT}
-  else
     wget -4qo- "${BASE_URL}/utils/${JS_SCRIPT}?dl=1" -O "${JS_SCRIPT}" --show-progress --progress=bar:force:noscroll 2>&1
     sleep 0.3
     chmod 644 ${JS_SCRIPT}
@@ -1383,17 +1399,13 @@ _stop_energi3 () {
 
   # Check if energi3 process is running and stop it
   
-  ENERGI3PID=`ps -ef | grep energi3 | grep console | grep -v "grep energi3" | grep -v "color=auto" | awk '{print $2}' `
-    
-  if [ ! -z "${ENERGI3PID}" ]
+  SYSTEMCTLSTATUS=`systemctl status energi3.service | grep "Active:" | awk '{print $2}'`
+  
+  if [[ "${SYSTEMCTLSTATUS}" == "Active" ]]
   then
-    echo "Stopping Energi3"
-    kill ${ENERGI3PID}
-    sleep 3
+    systemctl stop energi3.service
   else
-    echo
-    echo "Energi3 is not running on this server"
-    sleep 3
+    echo "energi3 service is not running..."
   fi
   
 }
@@ -1917,9 +1929,9 @@ _end_instructions () {
  \:\ \/ /:/  /
 ENERGI3
 echo "${GREEN}  \:\  /:/  /  ${NC}Thank you for supporting Energi! Good luck staking."
-echo "${GREEN}   \:\/:/  /   ${NC}Run the following script to start/stop the Node:"
-echo "${GREEN}    \::/  /    ${NC}- start_screen_staking.sh  Script to start staking"
-echo "${GREEN}     \/__/     ${NC}- start_screen_mn.sh       Script to start masternode"
+echo "${GREEN}   \:\/:/  /   ${NC}To start energi3: sudo systemctl start energi3"
+echo "${GREEN}    \::/  /    ${NC}To stop energi3 : sudo systemctl stop energi3"
+echo "${GREEN}     \/__/     ${NC}For status      : sudo systemctl status energi3"
 echo ${NC}
 echo "For instructions visit: ${DOC_URL}"
 echo
