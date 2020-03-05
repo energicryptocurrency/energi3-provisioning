@@ -11,7 +11,7 @@
 #         from v2 to v3.
 # 
 # Version:
-#   1.2.5 20200303 ZA Initial Script
+#   1.2.6 20200305 ZA Initial Script
 #
 : '
 # Run the script to get started:
@@ -685,7 +685,7 @@ _install_energi3 () {
     mv energi3-${GIT_LATEST}-linux-amd64/bin/energi3 ${BIN_DIR}/.
     rm -rf energi3-${GIT_LATEST}-linux-amd64
   else
-    mv energi3-${GIT_LATEST}-linux-amd64 ${ENERGI3_HOME}
+    mv energi3-${GIT_LATEST}-linux-amd64 ${ENERGI3_EXE}
   fi
   rm energi3-${GIT_LATEST}-linux-amd64.tgz
   
