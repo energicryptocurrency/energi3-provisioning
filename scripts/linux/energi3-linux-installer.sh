@@ -1844,7 +1844,7 @@ _end_instructions () {
  /:/ /:/ /\__\ |______|_| \_|______|_|  \_\\_____|_____|____/
  \:\ \/ /:/  /
 ENERGI3
-echo "${GREEN}  \:\  /:/  /  ${NC}Thank you for supporting Energi! Good luck staking."
+echo "${GREEN}  \:\  /:/  /  ${NC}Please logout and log back in as ${USRNAME}"
 echo "${GREEN}   \:\/:/  /   ${NC}To start energi3: sudo systemctl start energi3"
 echo "${GREEN}    \::/  /    ${NC}To stop energi3 : sudo systemctl stop energi3"
 echo "${GREEN}     \/__/     ${NC}For status      : sudo systemctl status energi3"
@@ -1991,6 +1991,7 @@ case ${INSTALLTYPE} in
         _check_clock
         _add_swap
         _add_logrotate
+        _add_systemd
         
         # Check if user wants to install 2FA
         clear 2> /dev/null
@@ -2089,6 +2090,7 @@ case ${INSTALLTYPE} in
         _check_clock
         _add_swap
         _add_logrotate
+        _add_systemd
         
         if [[ ! -s "${USRHOME}/.google_authenticator" ]]
         then
