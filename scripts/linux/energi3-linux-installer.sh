@@ -11,7 +11,7 @@
 #         from v2 to v3.
 # 
 # Version:
-#   1.2.6 20200305 ZA Initial Script
+#   1.2.7 20200306 ZA Initial Script
 #
 : '
 # Run the script to get started:
@@ -1298,89 +1298,6 @@ _copy_keystore() {
 
 }
 
-_store_keystore_pw () {
-
-  # Store keystore password for auto restart
-
-  # Create secure directory
-  if [[ ! -d "${PW_DIR}" ]]
-  then
-    mkdir -p "${PW_DIR}"
-    chmod 700 ${PW_DIR}
-    if [[ ${EUID} = 0 ]]
-    then
-      chown ${USRNAME}:${USRNAME} ${PW_DIR}
-    fi
-  fi
-
-  # See if node is unlocked for staking.
-  NODE_UNLOCKED=$( echo "true" )
-  
-  if [[ "${NODE_UNLOCKED}" != 'true' ]]
-  then
-    echo "Energi3 Node is not running.  Cannot update passwords"
-    echo "Continuing..."
-    sleep 3
-    return
-  fi
-  
-  for KS in `ls ${CONF_DIR}/keystore`
-  do
-    unset PWACCTNUM
-    unset BASENAME
-    BASENAME=$( basename ${KS} )
-    PWACCTNUM="0x`echo ${BASENAME} | awk -F\-\- '{ print $3 }'`"
-
-    rm -f "${ENERGI3_HOME}/.secure/${PWACCTNUM}.pwd" 2>/dev/null
-    unset PASSWORD
-    unset CHARCOUNT
-    echo -n "Set password for account ${PWACCTNUM}: "
-    stty -echo
-
-    CHARCOUNT=0
-    PROMPT=''
-    CHAR=''
-    while IFS= read -p "${PROMPT}" -r -s -n 1 CHAR
-    do
-      # Enter - accept password
-      if [[ "${CHAR}" == $'\0' ]]
-      then
-        break
-      fi
-      # Backspace
-      if [[ "${CHAR}" == $'\177' ]]
-      then
-        if [[ "${CHARCOUNT}" -gt 0 ]]
-        then
-          CHARCOUNT=$(( CHARCOUNT - 1 ))
-          PROMPT=$'\b \b'
-          PASSWORD="${PASSWORD%?}"
-        else
-          PROMPT=''
-        fi
-      else
-        CHARCOUNT=$((CHARCOUNT+1))
-        PROMPT='*'
-        PASSWORD+="$CHAR"
-      fi
-    done
-    stty echo
-
-    echo
-    touch "${PW_DIR}/${PWACCTNUM}.pwd"
-    echo "${PASSWORD}" > "${PW_DIR}/${PWACCTNUM}.pwd"
-    chmod 600 "${PW_DIR}/${PWACCTNUM}.pwd"
-    if [[ ${EUID} = 0 ]]
-    then
-      chown ${USRNAME}:${USRNAME} "${PW_DIR}/${PWACCTNUM}.pwd"
-    fi
-
-  done
- 
-  unset PASSWORD
-  unset CHARCOUNT
-}
-
 _start_energi3 () {
 
   # Start energi3
@@ -1452,7 +1369,6 @@ _start_energi2 () {
       done
       V2WALLET_BALANCE=$( energi-cli ${APPARG} getbalance )
   fi
-
 
 }
 
@@ -2113,14 +2029,6 @@ case ${INSTALLTYPE} in
         then
           _copy_keystore
         fi
-
-        REPLY=''
-        read -p "Do you want to auto start Energi3 Node after computer reboots ([y]/n)?: " -r
-        REPLY=${REPLY,,} # tolower
-        if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
-        then
-          _store_keystore_pw
-        fi
         
         ;;
         
@@ -2217,15 +2125,7 @@ case ${INSTALLTYPE} in
         # ==> Run as user <==
         #
         _upgrade_energi3
-        
-        REPLY=''
-        read -p "Do you want to auto start Energi3 Node after computer reboots ([y]/n)?: " -r
-        REPLY=${REPLY,,} # tolower
-        if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
-        then
-          _store_keystore_pw
-        fi
-        
+ 
         ;;
       
       b)
@@ -2360,15 +2260,7 @@ case ${INSTALLTYPE} in
             echo
             sleep 3
           fi
-        
-          REPLY=''
-          read -p "Do you want to auto start Energi3 Node after computer reboots ([y]/n)?: " -r
-          REPLY=${REPLY,,} # tolower
-          if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
-          then
-            _store_keystore_pw
-          fi
-        
+
           _stop_energi2
           
           _start_energi3
