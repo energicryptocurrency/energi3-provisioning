@@ -151,7 +151,6 @@ if exist "%BIN_DIR%\%EXE_NAME%" (
 
   set RUN_VERSION=%RUN_VERSION:-=&rem.%
   @echo Current version of Energi3 installed: %RUN_VERSION%
-  pause
   TIMEOUT /T 5
 ) else (
   @echo Energi3 is not installed in %BIN_DIR% of this computer.
@@ -189,7 +188,6 @@ exit /b
 
 :testVersions  version1  version2
 call :compareVersions %1 %2
-pause
 if %errorlevel% == 1 goto :NEWVERSION
 if %errorlevel% == -1 goto :OLDVERSION
 if %errorlevel% == 0 goto :SAMEVERSION
