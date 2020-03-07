@@ -11,7 +11,7 @@
 #         from v2 to v3.
 # 
 # Version:
-#   1.2.7 20200306 ZA Initial Script
+#   1.2.8 20200306 ZA Initial Script
 #
 : '
 # Run the script to get started:
@@ -1198,23 +1198,22 @@ _copy_keystore() {
   
   clear
   echo
-  echo "This script uses https://send.firefox.com/ to transfer files from your"
-  echo "desktop computer onto the vps. You can read more about the service here"
-  echo "https://en.wikipedia.org/wiki/Firefox_Send"
-  sleep .3
+  echo "Next we will copy the wallet file from your desktop to the VPS."
+  echo "To start click on link below:"
   echo
-  echo "Shutdown your desktop Energi3 node and upload the keystore file to"
   echo "https://send.firefox.com/"
-  echo "Paste in the URL to your keystore file below:"
+  echo
+  echo "Once upload completes, copy the URL from Firefox and paste below:"
   sleep .3
   echo
   REPLY=''
   while [[ -z "${REPLY}" ]] || [[ "$( echo "${REPLY}" | grep -c 'https://send.firefox.com/download/' )" -eq 0 ]]
   do
-    read -p "URL (leave blank to do it manually (sftp/scp)): " -r
+    read -p "Paste URL (leave blank and hit ENTER to do it manually): " -r
     if [[ -z "${REPLY}" ]]
     then      
-      echo "Please copy the keystore file to ${CONF_DIR}/keystore directory on your own"
+      echo "Please copy the wallet file to ${CONF_DIR}/keystore directory on your own using"
+      echo "an sftp software WSFTP or "
       read -p "Press Enter Once Done: " -r
       if [[ ${EUID} = 0 ]]
       then
@@ -1303,9 +1302,10 @@ _start_energi3 () {
   # Start energi3
   
   SYSTEMCTLSTATUS=`systemctl status energi3.service | grep "Active:" | awk '{print $2}'`
-  if [[ "${SYSTEMCTLSTATUS}" -ne "Active" ]]
+  if [[ "${SYSTEMCTLSTATUS}" != "Active" ]]
   then
-    systemctl start energi3.service
+    echo "Starting Energi Core Node...."
+    ${SUDO} systemctl start energi3.service
   else
     echo "energi3 service is running..."
   fi
@@ -1318,13 +1318,35 @@ _stop_energi3 () {
   
   SYSTEMCTLSTATUS=`systemctl status energi3.service | grep "Active:" | awk '{print $2}'`
   
-  if [[ "${SYSTEMCTLSTATUS}" == "Active" ]]
+  if [[ "${SYSTEMCTLSTATUS}" = "Active" ]]
   then
-    systemctl stop energi3.service
+    echo "Stopping Energi Core Node..."
+    ${SUDO} systemctl stop energi3.service
   else
     echo "energi3 service is not running..."
   fi
   
+}
+
+_get_enode () {
+
+  # Print enode of core node
+  while [ ! -S ${CONF_DIR}/energi3.ipc ]
+  do
+    sleep 1
+  done
+  sleep 1
+  
+  echo
+  echo "Use the following enode information to announce Masternode in Energi Nexus:"
+  if [[ ${EUID} = 0 ]]
+  then
+    su - ${USRNAME} -c "${BIN_DIR}/energi3 ${APPARG} attach -exec 'admin.nodeInfo.enode' " 2>/dev/null | jq -r
+  else
+    energi3 ${APPARG} attach -exec "admin.nodeInfo.enode" 2>/dev/null | jq -r
+  fi
+  echo
+
 }
 
 _start_energi2 () {
@@ -1991,7 +2013,6 @@ case ${INSTALLTYPE} in
         _check_clock
         _add_swap
         _add_logrotate
-        _add_systemd
         
         # Check if user wants to install 2FA
         clear 2> /dev/null
@@ -2008,15 +2029,6 @@ case ${INSTALLTYPE} in
         then
           _setup_two_factor
         fi
-        
-        # Check if user wants to install RSA for key based login
-        REPLY=''
-        read -p "Do you want to install RSA Key [Y/n]?: " -r
-        REPLY=${REPLY,,} # tolower
-        if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
-        then
-          _add_rsa_key
-        fi
 
         #
         # ==> Run as user <==
@@ -2024,12 +2036,16 @@ case ${INSTALLTYPE} in
         _install_energi3
         
         REPLY=''
-        read -p "Do you want to download keystore account file to the computer (y/[n])?: " -r
+        read -p "Do you want to download wallet file to the computer (y/[n])?: " -r
         REPLY=${REPLY,,} # tolower
         if [[ "${REPLY}" == 'y' ]]
         then
           _copy_keystore
         fi
+
+        _add_systemd
+        
+        _start_energi3
         
         ;;
         
@@ -2090,7 +2106,6 @@ case ${INSTALLTYPE} in
         _check_clock
         _add_swap
         _add_logrotate
-        _add_systemd
         
         if [[ ! -s "${USRHOME}/.google_authenticator" ]]
         then
@@ -2110,23 +2125,13 @@ case ${INSTALLTYPE} in
             _setup_two_factor
           fi
         fi
-        
-        if [[ ! -s "${USRHOME}/.ssh/authorized_keys" ]]
-        then
-          # Check if user wants to install RSA for key based login
-          REPLY=''
-          read -p "Do you want to install RSA Key [[y]/n]?: " -r
-          REPLY=${REPLY,,} # tolower
-          if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
-          then
-            _add_rsa_key
-          fi
-        fi
 
         #
         # ==> Run as user <==
         #
+        _stop_energi3
         _upgrade_energi3
+        _start_energi3
  
         ;;
       
@@ -2206,15 +2211,6 @@ case ${INSTALLTYPE} in
         then
           _setup_two_factor
         fi
-        
-        # Check if user wants to install RSA for key based login
-        REPLY=''
-        read -p "Do you want to install RSA Key [Y/n]?: " -r
-        REPLY=${REPLY,,} # tolower
-        if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
-        then
-          _add_rsa_key
-        fi
 
         #
         # ==> Run as user <==
@@ -2262,10 +2258,6 @@ case ${INSTALLTYPE} in
             echo
             sleep 3
           fi
-
-          _stop_energi2
-          
-          _start_energi3
           
         fi
         
@@ -2299,6 +2291,9 @@ esac
 # End installer
 ##
 _end_instructions
+
+# present enode information
+_get_enode
 
 
 # End of Installer
