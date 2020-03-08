@@ -1337,12 +1337,17 @@ _get_enode () {
   done
   sleep 1
   
-  echo
-  echo "Use the following enode information to announce Masternode in Energi Nexus:"
+  echo "${GREEN}To Announce Masternode go to:${NC} https://gen3.energi.network/masternodes/announce"
   if [[ ${EUID} = 0 ]]
   then
+    echo -n "Owner Address: "
+    su - ${USRNAME} -c "${BIN_DIR}/energi3 ${APPARG} attach -exec 'personal.listAccounts' " 2>/dev/null | jq -r '.[]' | head -1
+    echo "Masternode enode URL: "
     su - ${USRNAME} -c "${BIN_DIR}/energi3 ${APPARG} attach -exec 'admin.nodeInfo.enode' " 2>/dev/null | jq -r
   else
+    echo -n "Owner Address: "
+    energi3 ${APPARG} attach -exec "personal.listAccounts" 2>/dev/null | jq -r | head -1
+    echo "Masternode enode URL: "
     energi3 ${APPARG} attach -exec "admin.nodeInfo.enode" 2>/dev/null | jq -r
   fi
   echo
