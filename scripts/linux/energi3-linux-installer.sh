@@ -11,7 +11,7 @@
 #         from v2 to v3.
 # 
 # Version:
-#   1.2.8 20200306 ZA Initial Script
+#   1.2.9 20200309 ZA Initial Script
 #
 : '
 # Run the script to get started:
@@ -54,7 +54,7 @@ S3URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/ener
 #export BOOTSTRAP_URL="https://www.dropbox.com/s/%BLK_HASH%/energi3bootstrap.tar.gz"
 
 # Snapshot Block (need to update)
-MAINNETSSBLOCK=1500000
+MAINNETSSBLOCK=1108550
 TESTNETSSBLOCK=1500000
 
 # Set Executables & Configuration
@@ -616,21 +616,20 @@ User=${USRNAME}
 Group=${USRNAME}
 UMask=0027
 ExecStart=${BIN_DIR}/energi3 \
-          --datadir ${CONF_DIR} \
-          --masternode \
-          --mine \
-          --nat extip:${EXTIP} \
-          --miner.autocollateralize 0 \
-          --preload ${JS_DIR}/utils.js \
-          --rpc \
-          --rpcport 39796 \
-          --rpcaddr "127.0.0.1"  \
-          --rpcapi admin,eth,web3,rpc,personal,energi \
-          --ws \
-          --wsaddr "127.0.0.1" \
-          --wsport 39795 \
-          --wsapi admin,eth,net,web3,personal,energi \
-          --verbosity 0
+--datadir ${CONF_DIR} \
+--masternode \
+--mine \
+--nat extip:${EXTIP} \
+--preload ${JS_DIR}/utils.js \
+--rpc \
+--rpcport 39796 \
+--rpcaddr "127.0.0.1"  \
+--rpcapi admin,eth,web3,rpc,personal,energi \
+--ws \
+--wsaddr "127.0.0.1" \
+--wsport 39795 \
+--wsapi admin,eth,net,web3,personal,energi \
+--verbosity 0
 WorkingDirectory=${USRHOME}
 
 [Install]
@@ -638,7 +637,7 @@ WantedBy=multi-user.target
 SYSTEMD_CONF
 
     echo "    Enabling energi3 service"
-    systemctl enable energi3
+    ${SUDO} systemctl enable energi3
 
   fi
 }
@@ -1331,20 +1330,23 @@ _stop_energi3 () {
 _get_enode () {
 
   # Print enode of core node
-  while [ ! -S ${CONF_DIR}/energi3.ipc ]
+  I=1
+  while [ ! -S ${CONF_DIR}/energi3.ipc ] || [ ${I} = 60 ]
   do
     sleep 1
+    ((I++))
   done
   sleep 1
   
-  echo "${GREEN}To Announce Masternode go to:${NC} https://gen3.energi.network/masternodes/announce"
-  if [[ ${EUID} = 0 ]]
+  if [[ ${EUID} = 0 ]] && [[ -S ${CONF_DIR}/energi3.ipc ]]
   then
+    echo "${GREEN}To Announce Masternode go to:${NC} https://gen3.energi.network/masternodes/announce"
     echo -n "Owner Address: "
     su - ${USRNAME} -c "${BIN_DIR}/energi3 ${APPARG} attach -exec 'personal.listAccounts' " 2>/dev/null | jq -r '.[]' | head -1
     echo "Masternode enode URL: "
     su - ${USRNAME} -c "${BIN_DIR}/energi3 ${APPARG} attach -exec 'admin.nodeInfo.enode' " 2>/dev/null | jq -r
   else
+    echo "${GREEN}To Announce Masternode go to:${NC} https://gen3.energi.network/masternodes/announce"
     echo -n "Owner Address: "
     energi3 ${APPARG} attach -exec "personal.listAccounts" 2>/dev/null | jq -r | head -1
     echo "Masternode enode URL: "
@@ -1875,8 +1877,7 @@ echo "${GREEN}  \:\  /:/  /  ${NC}Please logout and log back in as ${USRNAME}"
 echo "${GREEN}   \:\/:/  /   ${NC}To start energi3: sudo systemctl start energi3"
 echo "${GREEN}    \::/  /    ${NC}To stop energi3 : sudo systemctl stop energi3"
 echo "${GREEN}     \/__/     ${NC}For status      : sudo systemctl status energi3"
-echo ${NC}
-echo "For instructions visit: ${DOC_URL}"
+echo ${NC}"For instructions visit: ${DOC_URL}"
 echo
 }
 
