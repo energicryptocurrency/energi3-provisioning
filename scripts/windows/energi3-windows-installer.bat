@@ -9,8 +9,9 @@
 ::       The script will upgrade an existing installation.
 ::
 :: Version:
-::       1.0.0   ZA Initial Script
-::       1.2.4   ZA Bug Fixes and Enhancements
+::       1.0.0           ZA Initial Script
+::       1.2.4           ZA Bug Fixes and Enhancements
+::       1.2.10 20200310 ZA added removedb to upgrade
 ::
 :: Download and run the batch script to:
 :: explorer.exe https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/windows/energi3-windows-installer.bat
@@ -248,6 +249,7 @@ exit /b
   
   if exist "%BIN_DIR%\%EXE_NAME%" (
     cd "%BIN_DIR%"
+    "%EXE_NAME%" removedb
     ren "%EXE_NAME%" "%EXE_NAME%.old"
   )
 
