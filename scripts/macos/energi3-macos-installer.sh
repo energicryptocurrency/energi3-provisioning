@@ -9,7 +9,8 @@
 #         script will upgrade an existing installation.
 # 
 # Version:
-#   1.2.3 20200302 ZA Initial Script
+#   1.2.3  20200302 ZA Initial Script
+#   1.2.10 20200310 ZA added removedb to upgrade
 #
 : '
 # Run the script to get started:
@@ -411,6 +412,7 @@ _upgrade_energi3 () {
   
   if _version_gt ${GIT_LATEST} ${INSTALL_VERSION}; then
     echo "Installing newer version ${GIT_VERSION} from Github"
+     ${BIN_DIR}/${ENERGI3_EXE} removedb
     _install_energi3
   else
     echo "Latest version of Energi3 is installed: ${INSTALL_VERSION}"
