@@ -17,7 +17,7 @@
 : '
 # Run the script to get started:
 ```
-bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/energi3-aarch64-installer.sh)" ; source ~/.bashrc
+bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/energi3-rpi-installer.sh)" ; source ~/.bashrc
 ```
 '
 ######################################################################
