@@ -11,8 +11,8 @@
 #         from v2 to v3.
 # 
 # Version:
-#   1.2.9 20200309  ZA Initial Script
-#   1.2.10 10100310 ZA added removedb to upgrade
+#   1.2.9  20200309  ZA Initial Script
+#   1.2.12 20200311  ZA added removedb to upgrade
 #
 : '
 # Run the script to get started:
@@ -811,8 +811,21 @@ _upgrade_energi3 () {
   
   if _version_gt ${GIT_LATEST} ${INSTALL_VERSION}; then
     echo "Installing newer version ${GIT_VERSION} from Github"
-    ${BIN_DIR}/${ENERGI3_EXE} removedb
+    if [[ -f "${CONF_DIR}/removedb-list.db" ]]
+    then
+      rm -f ${CONF_DIR}/removedb-list.db
+      wget -4qo- "${BASE_URL}/utils/removedb-list.db?dl=1" -O "${CONF_DIR}/removedb-list.db" --show-progress --progress=bar:force:noscroll 2>&1
+    else
+      wget -4qo- "${BASE_URL}/utils/removedb-list.db?dl=1" -O "${CONF_DIR}/removedb-list.db" --show-progress --progress=bar:force:noscroll 2>&1 
+    fi
+    
+    if [[ $EUID = 0 ]]
+    then
+      chown ${USRNAME}:${USRNAME} ${CONF_DIR}/removedb-list.db
+    fi
+    
     _install_energi3
+    
   else
     echo "Latest version of Energi3 is installed: ${INSTALL_VERSION}"
     echo "Nothing to install"
@@ -1319,10 +1332,11 @@ _stop_energi3 () {
   
   SYSTEMCTLSTATUS=`systemctl status energi3.service | grep "Active:" | awk '{print $2}'`
   
-  if [[ "${SYSTEMCTLSTATUS}" = "Active" ]]
+  if [[ "${SYSTEMCTLSTATUS}" = "active" ]]
   then
     echo "Stopping Energi Core Node..."
     ${SUDO} systemctl stop energi3.service
+    sleep 1
   else
     echo "energi3 service is not running..."
   fi
@@ -2138,7 +2152,30 @@ case ${INSTALLTYPE} in
         # ==> Run as user <==
         #
         _stop_energi3
+        
         _upgrade_energi3
+        
+        if [[ -f ${CONF_DIR}/removedb-list.db ]]
+        then
+          for L in `cat ${CONF_DIR}/removedb-list.db`
+          do
+            if [[ ${L} = ${INSTALL_VERSION} ]]
+            then
+              echo "${GREEN}Vesion ${L} requires a reset of chaindata${NC}"
+              ${BIN_DIR}/${ENERGI3_EXE} removedb
+              break
+              
+              if [[ -f "${CONF_DIR}/energi3/chaindata/CURRENT" ]]
+              then
+                echo "Removing chaindata..."
+                rm -rf ${CONF_DIR}/energi3/chaindata/*
+                touch ${CONF_DIR}/v3.0.1-genesis.stamp
+              fi
+              
+            fi
+          done
+        fi
+        
         _start_energi3
  
         ;;
