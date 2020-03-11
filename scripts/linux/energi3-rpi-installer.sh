@@ -84,6 +84,7 @@ _os_arch () {
   then
     echo "${GREEN}supported${NC}"
   elif [ "${OSNAME}" = "Raspbian GNU/Linux" ]
+  then
     echo "${GREEN}supported${NC}"
   else
     echo "${RED}not supported${NC}"
