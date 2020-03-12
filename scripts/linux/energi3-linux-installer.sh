@@ -13,6 +13,7 @@
 # Version:
 #   1.2.9  20200309  ZA Initial Script
 #   1.2.12 20200311  ZA added removedb to upgrade
+#   1.2.14 20200312  ZA added create keystore if not downloading
 #
 : '
 # Run the script to get started:
@@ -2063,6 +2064,16 @@ case ${INSTALLTYPE} in
         if [[ "${REPLY}" == 'y' ]]
         then
           _copy_keystore
+        else
+          if [ -d ${CONF_DIR}/keystore ]
+          then
+            mkdir -p ${CONF_DIR}/keystore
+            chmod 700 ${CONF_DIR}/keystore
+            if [[ ${EUID} = 0 ]]
+            then
+              chown -R "${USRNAME}":"${USRNAME}" "${CONF_DIR}"
+            fi
+          fi
         fi
 
         _add_systemd
