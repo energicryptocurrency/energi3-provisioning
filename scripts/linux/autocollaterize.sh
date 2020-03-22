@@ -104,6 +104,7 @@ echo
 if [[ ! -z ${ISDISABLED} ]]
 then
     echo "autocollateralize is ${RED}DISABLED{NC} on the Core Node"
+    _cmd-collChk
     echo
     echo "To enable autocollateralize, type: e"
     echo "Exit without making change, type : x"
@@ -116,6 +117,7 @@ then
 elif [[ ! -z ${ISENABLED} ]]
 then
     echo "autocollateralize is ${GREEN}ENABLED${NC} on the Core Node"
+    _cmd-collChk
     echo
     echo "To diable autocollateralize, type: d"
     echo "Exit without making change, type : x"
