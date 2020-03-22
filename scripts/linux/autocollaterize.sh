@@ -13,15 +13,13 @@
 : '
 # Run the script to get started:
 ```
-bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/autocollaterelize.sh)" ; source ~/.bashrc
+bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/autocollaterize.sh)" ; source ~/.bashrc
 ```
 '
 ######################################################################
 
-# Actual
-#SERVICEFILE=/lib/systemd/system/energi3.service
-# Testing
-SERVICEFILE=/home/nrgstaker/energi3.service
+# Service File location
+SERVICEFILE=/lib/systemd/system/energi3.service
 
 # Set colors
 BLUE=`tput setaf 4`
@@ -109,11 +107,11 @@ _cmd-collChk () {
     SETTO=`energi3 ${ARG} attach --exec "miner.setAutocollateralize()" 2>/dev/null | head -1`
     if [[ ${SETTO} == 0 ]]
     then
-        echo "autocollateralize is OFF"
+        echo "autocollateralize is set to ${RED}OFF${NC}"
 
     elif [[ ${SETTO} == 1 ]]
     then
-        echo "autocollateralize is ON"
+        echo "autocollateralize is set to ${GREEN}ON${NC}"
 
     fi
 }
