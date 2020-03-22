@@ -119,7 +119,7 @@ then
     echo "autocollateralize is ${GREEN}ENABLED${NC} on the Core Node"
     _cmd-collChk
     echo
-    echo "To diable autocollateralize, type: d"
+    echo "To disable autocollateralize, type: d"
     echo "Exit without making change, type : x"
     echo
     read -n 1 -p " Select option (d/[x]): " OPTION
@@ -134,7 +134,7 @@ then
     _cmd-collChk
     echo
     echo "To enable autocollateralize, type: e"
-    echo "To diable autocollateralize, type: d"
+    echo "To disable autocollateralize, type: d"
     echo "Exit without making change, type : x"
     echo
     read -n 1 -p " Select option (e/d/[x]): " OPTION
