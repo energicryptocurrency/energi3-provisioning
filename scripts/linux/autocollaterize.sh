@@ -103,7 +103,7 @@ echo
 
 if [[ ! -z ${ISDISABLED} ]]
 then
-    echo "autocollateralize is ${RED}DISABLED{NC} on the Core Node"
+    echo "autocollateralize is ${RED}DISABLED${NC} on the Core Node"
     _cmd-collChk
     echo
     echo "To enable autocollateralize, type: e"
