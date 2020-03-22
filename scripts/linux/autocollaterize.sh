@@ -31,9 +31,9 @@ NC=`tput sgr0`
 #
 if [[ -f ${SERVICEFILE} ]]
 then
-    CHKIFTHERE=`grep autocollateralize ${SERVICEFILE}`
-    ISDISABLED=`grep "autocollateralize 0" ${SERVICEFILE}`
-    ISENABLED=`grep "autocollateralize 1" ${SERVICEFILE}`
+    CHKIFTHERE=`grep miner.autocollateralize ${SERVICEFILE}`
+    ISDISABLED=`grep "miner.autocollateralize 0" ${SERVICEFILE}`
+    ISENABLED=`grep "miner.autocollateralize 1" ${SERVICEFILE}`
 
 else
     echo "Cannot find service file to update"
@@ -136,7 +136,7 @@ case ${OPTION} in
           _cmd-collOn
 	  echo
 	  echo "Updating energi3.service file for reboots"
-          sudo sed -i 's/node/node --autocollateralize 1/' ${SERVICEFILE}
+          sudo sed -i 's/node/node --miner.autocollateralize 1/' ${SERVICEFILE}
 	  sudo systemctl daemon-reload
 
       elif [[ -z ${ISENABLED} ]]
@@ -144,7 +144,7 @@ case ${OPTION} in
           _cmd-collOn
 	  echo
 	  echo "Updating energi3.service file for reboots"
-          sudo sed -i 's/--autocollateralize 0/--autocollateralize 1/' ${SERVICEFILE}
+          sudo sed -i 's/--miner.autocollateralize 0/--miner.autocollateralize 1/' ${SERVICEFILE}
           sudo systemctl daemon-reload
       else
           echo "autocolateralise is already set to roll up"
@@ -159,7 +159,7 @@ case ${OPTION} in
           _cmd-collOff
 	  echo
 	  echo "Updating energi3.service file for reboots"
-          sudo sed -i 's/node/node --autocollateralize 0/' ${SERVICEFILE}
+          sudo sed -i 's/node/node --miner.autocollateralize 0/' ${SERVICEFILE}
           sudo systemctl daemon-reload
 
       elif [[ -z ${ISDISABLED} ]]
@@ -167,7 +167,7 @@ case ${OPTION} in
           _cmd-collOff
 	  echo
 	  echo "Updating energi3.service file for reboots"
-          sudo sed -i 's/--autocollateralize 1/--autocollateralize 0/' ${SERVICEFILE}
+          sudo sed -i 's/--miner.autocollateralize 1/--miner.autocollateralize 0/' ${SERVICEFILE}
           sudo systemctl daemon-reload
 
       fi
