@@ -22,3 +22,7 @@ sudo timedatectl set-ntp no
 
 sudo apt install ntp -y
 sudo /etc/init.d/ssh start
+
+sleep 0.3
+ntpq -p
+
