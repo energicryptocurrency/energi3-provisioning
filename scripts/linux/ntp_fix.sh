@@ -24,8 +24,9 @@ sudo apt install ntp -y
 sudo apt install ntpdate -y
 
 sleep 0.3
-sudo /etc/init.d/ssh start
+sudo systemctl start ntp
 
 sleep 0.3
-ntpq -p
+echo -n "NTP status: "
+systemctl status ntp | grep Active | awk '{print $2}'
 
