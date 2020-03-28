@@ -21,6 +21,9 @@ bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi
 sudo timedatectl set-ntp no
 
 sudo apt install ntp -y
+sudo apt install ntpdate -y
+
+sleep 0.3
 sudo /etc/init.d/ssh start
 
 sleep 0.3
