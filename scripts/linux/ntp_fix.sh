@@ -18,15 +18,34 @@ bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi
 '
 ######################################################################
 
-sudo timedatectl set-ntp no
+if [ -x "$( command -v timedatectl )" ]
+then
+  echo "Stopping timedatectl..."
+  sudo timedatectl set-ntp no
+fi
 
-sudo apt install ntp -y
-sudo apt install ntpdate -y
+if [ ! -x "$( command -v ntp )" ]
+then
+  sudo apt install ntp -y
+fi
+
+if [ ! -x "$( command -v ntpdate )" ]
+then
+  sudo apt install ntpdate -y
+fi
 
 sleep 0.3
+clear
+echo
+echo
+echo "Starting ntp service..."
 sudo systemctl start ntp
 
 sleep 0.3
+echo
+echo
 echo -n "NTP status: "
 systemctl status ntp | grep Active | awk '{print $2}'
+
+echo
 
