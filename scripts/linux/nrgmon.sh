@@ -1717,6 +1717,7 @@ Stake Reward: ${REWARDAMT}"
               _MNREWARDS=$( SQL_REPORT "SELECT blockNum,Reward FROM mn_rewards WHERE blockNum BETWEEN ${STARTMNBLK} and ${ENDMNBLK};" )
               _PAYLOAD="
               NRG Mkt Price: USD ${NRGUSDPRICE}
+              Masternode Collateral: ${MNCOLLATERAL} NRG
               Masternode reward: ${MNTOTALNRG} NRG
               ${_MNREWARDS}
               "
