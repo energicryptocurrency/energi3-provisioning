@@ -1632,15 +1632,15 @@ ${RKHUNTER_OUTPUT}"
     # Change address to lower case
     ADDR=$( echo ${ADDR} | tr '[:upper:]' '[:lower:]' )
     
-    if [[ ! "${isADDRM}"  ]] && [[ ${MASTERNODE} -lt 1 ]]
-    then
-      MASTERNODE=1
-    elif [[ "${isADDRM}" ]] && [[ ${MASTERNODE} -lt 2 ]]
+    if [[ "${isADDRMN}" ]] && [[ ${MASTERNODE} -lt 2 ]]
     then
       MASTERNODE=2
-      MNINFO=2
-    fi
-      
+      MNINFO=0
+    elif [[ ! "${isADDRMN}"  ]] && [[ ${MASTERNODE} -lt 1 ]]
+    then
+      MASTERNODE=1
+    fi 
+       
     while [[ $( echo "$CHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1  ]]
     do
       BLOCKMINER=$( ${COMMAND} "nrg.getBlock($CHKBLOCK).miner" 2>/dev/null | jq -r '.' | tr '[:upper:]' '[:lower:]' )
@@ -1663,7 +1663,7 @@ Stake Reward: ${REWARDAMT}"
 
         PROCESS_NODE_MESSAGES "${DATADIR}" "stake_reward" "4" "${_PAYLOAD}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
       fi
-
+    
       # If Address is an MN
       if [[ ${isADDRMN} ]] & [[ -z ${ENDMNBLK} ]]
       then
