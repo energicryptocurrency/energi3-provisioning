@@ -1604,34 +1604,6 @@ ${RKHUNTER_OUTPUT}"
     fi
   fi
 
-  # Masternode Status.
-  if [[ ${MASTERNODE} -eq 1 ]]
-  then
-    if [[ ${MNINFO} -eq 1 ]]
-    then
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "3" "__${USRNAME} ${DAEMON_BIN}__
-Masternode should be starting up soon." "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
-    elif [[ ${MNINFO} -eq 2 ]]
-    then
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "2" "__${USRNAME} ${DAEMON_BIN}__
-Masternode list shows the masternode as active bug masternode status doesn't. Hopefully this changes soon." "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
-    else
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "1" "__${USRNAME} ${DAEMON_BIN}__
-Masternode is not currently running." "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
-    fi
-  elif [[ ${MASTERNODE} -eq 2 ]]
-  then
-    if [[ ${MNINFO} -eq 2 ]]
-    then
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "5" "__${USRNAME} ${DAEMON_BIN}__
-Masternode status and masternode list are good!" "Masternode Running" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
-    elif [[ ${MNINFO} -eq 0 ]]
-    then
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "5" "__${USRNAME} ${DAEMON_BIN}__
-Masternode status is good!" "Masternode Running" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
-    fi
-  fi
-
   # Report on masternode winner
   LASTCHKBLOCK=$( SQL_QUERY "SELECT value FROM variables WHERE key = 'last_block_checked';" )
   if [[ -z ${LISTACCOUNTS} ]]
@@ -1666,6 +1638,7 @@ Masternode status is good!" "Masternode Running" "${DISCORD_WEBHOOK_USERNAME}" "
     elif [[ "${isADDRM}" ]] && [[ ${MASTERNODE} -lt 2 ]]
     then
       MASTERNODE=2
+      MNINFO=2
     fi
       
     while [[ $( echo "$CHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1  ]]
@@ -1785,6 +1758,35 @@ Stake Reward: ${REWARDAMT}"
   
   # Get total on node
   GETTOTALBALANCE=$( echo "$GETBALANCE + $MNCOLLATERAL" | bc -l )
+  
+  # Masternode Status.
+  if [[ ${MASTERNODE} -eq 1 ]]
+  then
+    if [[ ${MNINFO} -eq 1 ]]
+    then
+      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "3" "__${USRNAME} ${DAEMON_BIN}__
+Masternode should be starting up soon." "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+    elif [[ ${MNINFO} -eq 2 ]]
+    then
+      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "2" "__${USRNAME} ${DAEMON_BIN}__
+Masternode list shows the masternode as active bug masternode status doesn't. Hopefully this changes soon." "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+    else
+      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "1" "__${USRNAME} ${DAEMON_BIN}__
+Masternode is not currently running." "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+    fi
+  elif [[ ${MASTERNODE} -eq 2 ]]
+  then
+    if [[ ${MNINFO} -eq 2 ]]
+    then
+      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "5" "__${USRNAME} ${DAEMON_BIN}__
+Masternode status and masternode list are good!" "Masternode Running" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+    elif [[ ${MNINFO} -eq 0 ]]
+    then
+      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "5" "__${USRNAME} ${DAEMON_BIN}__
+Masternode status is good!" "Masternode Running" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+    fi
+  fi
+
     
   # Update last_block_checked for next iteration
   SQL_QUERY "REPLACE INTO variables (key,value) VALUES ('last_block_checked','${CURRENTBLKNUM}');"
