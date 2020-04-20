@@ -336,7 +336,8 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
     do
       sudo rm -f /var/multi-masternode-data/nrgbot/nrgmon.sh
       echo "Downloading Masternode Setup Script."
-      #sudo wget -q4o- https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/nrgmon.sh -O /var/multi-masternode-data/nrgbot/nrgmon.sh
+      sudo wget -q4o- https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/nrgmon.sh -O /var/multi-masternode-data/nrgbot/nrgmon.sh
+      sudo chmod 755 /var/multi-masternode-data/nrgbot/nrgmon.sh
       COUNTER=$(( COUNTER+1 ))
       if [[ "${COUNTER}" -gt 3 ]]
       then
