@@ -1834,6 +1834,12 @@ Stake Reward: ${REWARDAMT}"
               fi
               log "${SHORTADDR}: *** Stake received ***"
               
+              # Get price once
+              if [[ -z "${NRGUSDPRICE}" ]]
+              then
+                NRGUSDPRICE=$( curl -H "Accept: application/json" --connect-timeout 30 -s "https://min-api.cryptocompare.com/data/price?fsym=NRG&tsyms=USD" | jq .USD )
+              fi
+              
               _MNREWARDS=$( SQL_REPORT "SELECT blockNum,Reward FROM mn_rewards WHERE blockNum BETWEEN ${STARTMNBLK} and ${ENDMNBLK};" )
               
               _PAYLOAD="
@@ -1841,6 +1847,7 @@ Stake Reward: ${REWARDAMT}"
               Account: ${SHORTADDR}
               Masternode Collateral: ${MNCOLLATERAL} NRG
               Masternode reward: ${MNTOTALNRG} NRG
+              ${_MNREWARDS}
               "
               
               # Post message
