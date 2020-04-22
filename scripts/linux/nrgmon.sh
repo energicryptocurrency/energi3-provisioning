@@ -50,17 +50,13 @@ NRGMONVER=1.0.1
  then
   . /var/multi-masternode-data/nrgbot/nrgmon.conf
  else
-  SENDNOTICE=N
+  SENDEMAIL=N
+  SENDSMS=N
  fi
 
  # Which Timezone you want to see notices
  export TZ=UTC
 
- # Temp Files
- TOMAILFILE=/tmp/reward_email.txt
- TOSMSFILE=/tmp/reward_sms.txt
- 
- 
  function CTRL_C () {
   stty sane 2>/dev/null
   printf "\e[0m"
@@ -218,9 +214,12 @@ then
   CPU_LOAD_WARN=2
 fi
 
- # APT update/upgrade
- sudo DEBIAN_FRONTEND=noninteractive apt-get update
- sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -yq
+ if [[ ! -f /var/multi-masternode-data/nrgbot/nrgmon.sh ]]
+ then
+    # APT update/upgrade if new install
+    sudo DEBIAN_FRONTEND=noninteractive apt-get update
+    sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -yq
+ fi
  
  # Get sqlite.
  if [ ! -x "$( command -v sqlite3 )" ]
@@ -955,19 +954,40 @@ ${MESSAGE}"
 }
 
 SEND_EMAIL () {
+
+  # Temp Files
+  TOMAILFILE=/tmp/reward_email.txt
+
   # Compose Email Message
   echo "To: ${SENDTOEMAIL}" > $TOMAILFILE
   echo "From: ${SENDTOEMAIL}" >> $TOMAILFILE
   echo "Subject: NRG-${SHORTADDR} - $1 " >> $TOMAILFILE
   echo ""  >> $TOMAILFILE
-  echo "Current Balance: ${CURRENTBAL} NRG" >> $TOMAILFILE
-  echo "Reward Amount:   ${REWARDAMT} NRG" >> $TOMAILFILE
-  echo "Market Price:    ${NRGPRICE}" >> $TOMAILFILE
+  echo "Current Balance: ${ACCTBALANCE} NRG" >> $TOMAILFILE
+  if [[ ! ${STAKERWD} == Y ]] 
+  then
+    echo "Reward Amount:   ${REWARDAMT} NRG" >> $TOMAILFILE
+  elif [[ ! ${MNRWD} == Y  ]]
+  then
+    echo "Reward Amount:   ${MNTOTALNRG} NRG" >> $TOMAILFILE
+  fi
+  echo "Market Price:    ${NRGUSDPRICE}" >> $TOMAILFILE
 
   echo "" >> $TOMAILFILE
+  
+  # Send email
+  log "${SHORTADDR}: Send email"
+  
+  ssmtp ${SENDTOEMAIL} < $TOMAILFILE
+  
+  rm $TOMAILFILE
 }
 
 SEND_SMS () {
+
+    # Temp Files
+    TOSMSFILE=/tmp/reward_sms.txt
+    
     # Compose SMS Message
     echo "To: ${SENDTOMOBILE}@${SENDTOGATEWAY}" > $TOSMSFILE
     echo "From: ${SENDTOEMAIL}" >> $TOSMSFILE
@@ -976,9 +996,11 @@ SEND_SMS () {
     echo "Amt Rcvd: ${REWARDAMT}" >> $TOSMSFILE
 
     # Send email
-    log "${SHORTADDR}: Send email & SMS"
-    ssmtp ${SENDTOEMAIL} < $TOMAILFILE
+    log "${SHORTADDR}: Send SMS"
+
     ssmtp ${SENDTOMOBILE}@${SENDTOGATEWAY} < $TOSMSFILE
+    
+    rm $TOSMSFILE
 }
 
  PROCESS_MESSAGES () {
@@ -1719,7 +1741,7 @@ ${RKHUNTER_OUTPUT}"
        
     while [[ $( echo "$CHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1  ]]
     do
-      BLOCKMINER=MINER[${CHKBLOCK}]
+      BLOCKMINER=${MINER[${CHKBLOCK}]}
 
       # Update database if stake received
       if [[ ${ADDR} == ${BLOCKMINER} ]]
