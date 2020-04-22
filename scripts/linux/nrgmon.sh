@@ -1822,7 +1822,7 @@ Stake Reward: ${REWARDAMT}"
         then
           # All consecutive masternode payout blocks were found
           ENDMNBLK=$CHKBLOCK
-          if [[ -z $MNTOTALNRG ]]
+          if [[ ! -z $MNTOTALNRG ]]
           then
               SQL_QUERY "REPLACE INTO mn_blocks (mnAddress, mnBlocksReceived, startMnBlk, endMnBlk, mnTotalReward) 
                 VALUES ('${ADDR}','Y', '${STARTMNBLK}', '${ENDMNBLK}', '${MNTOTALNRG}');" 
@@ -1857,11 +1857,11 @@ Stake Reward: ${REWARDAMT}"
               fi              
               
               # Reset after message processed
-              SQL_QUERY "UPDATE mn_blocks
-                SET mnBlocksReceived = 'S',
-                    startMnBlk = '0',
-                    endMnBlk = '0'
-                WHERE mnAddress = '${ADDR}';"
+              #SQL_QUERY "UPDATE mn_blocks
+              #  SET mnBlocksReceived = 'S',
+              #      startMnBlk = '0',
+              #      endMnBlk = '0'
+              #  WHERE mnAddress = '${ADDR}';"
           fi
         fi
       fi 
