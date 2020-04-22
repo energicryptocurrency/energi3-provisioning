@@ -13,6 +13,8 @@
 # Version:
 #   1.0.0  20200416  ZAlam Initial Script
 #
+# Set script version
+NRGMONVER=1.0.1
 
  : '
 # Run this file
@@ -43,6 +45,22 @@
  ### SELECT DATETIME(rewardTime,'unixepoch'),blockNumber,mnBlockReward FROM mn_rewards WHERE blockNumber BETWEEN ${STARTMNBLK} and ${ENDMNBLK};
  ###
  
+ # Load parameters from external conf file
+ if [[ -f /var/multi-masternode-data/nrgbot/nrgmon.conf ]]
+ then
+  . /var/multi-masternode-data/nrgbot/nrgmon.conf
+ else
+  SENDNOTICE=N
+ fi
+
+ # Which Timezone you want to see notices
+ export TZ=UTC
+
+ # Temp Files
+ TOMAILFILE=/tmp/reward_email.txt
+ TOSMSFILE=/tmp/reward_sms.txt
+ 
+ 
  function CTRL_C () {
   stty sane 2>/dev/null
   printf "\e[0m"
@@ -69,12 +87,11 @@
  NRGAPI="https://explorer.energi.network/api"
  
  # Set variables
- STARTMNBLK=''
- ENDMNBLK=''
  MNTOTALNRG=0
- NRGUSDPRICE=$( curl -H "Accept: application/json" --connect-timeout 30 -s "https://min-api.cryptocompare.com/data/price?fsym=NRG&tsyms=USD" | jq .USD )
  USRNAME=$( find /home -name nodekey  2>&1 | grep -v "Permission denied" | awk -F\/ '{print $3}' )
  export PATH=$PATH:/home/${USRNAME}/energi3/bin
+ RWDDATA="/home/${USRNAME}/etc/reward_data.csv"
+ LOGFILE="/home/${USRNAME}/log/nrg_monitor.log"
  
  # Set colors
  BLUE=$( tput setaf 4 )
@@ -201,11 +218,15 @@ then
   CPU_LOAD_WARN=2
 fi
 
+ # APT update/upgrade
+ sudo DEBIAN_FRONTEND=noninteractive apt-get update
+ sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -yq
+ 
  # Get sqlite.
  if [ ! -x "$( command -v sqlite3 )" ]
-then
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq sqlite3
-fi
+ then
+   sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq sqlite3
+ fi
  # Get jq.
  if [ ! -x "$( command -v jq)" ]
 then
@@ -276,7 +297,8 @@ fi
  stakeAddress TEXT,
  rewardTime INTEGER,
  blockNum INTEGER,
- Reward INTEGER,
+ reward INTEGER,
+ balance REAL,
  nrgPrice REAL,
  PRIMARY KEY (stakeAddress, blockNum)
 );"
@@ -286,7 +308,8 @@ fi
  mnAddress TEXT,
  rewardTime INTEGER,
  blockNum INTEGER,
- Reward INTEGER,
+ reward INTEGER,
+ balance REAL,
  nrgPrice REAL,
  PRIMARY KEY (mnAddress, blockNum)
 );"
@@ -308,6 +331,11 @@ energi3 https://s2.coinmarketcap.com/static/img/coins/128x128/3218.png Energi Mo
  DAEMON_BALANCE_LUT="
 energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
 "
+
+ # Add timestamp to Log
+ function log {
+    echo "[$(date --rfc-3339=seconds)]: $*" >> $LOGFILE
+}
 
  # Convert seconds to days, hours, minutes, seconds.
  DISPLAYTIME () {
@@ -395,6 +423,7 @@ SYSTEMD_CONF
   sudo systemctl daemon-reload
   echo "Enable nrgmon Service"
   sudo systemctl enable nrgmon.timer --now
+  sudo systemctl start nrgmon.timer
 }
 
  # Send the data to discord via webhook.
@@ -923,6 +952,33 @@ ${MESSAGE}"
     echo "${DESCRIPTION}">/dev/tty
     echo "-" >/dev/tty
   fi
+}
+
+SEND_EMAIL () {
+  # Compose Email Message
+  echo "To: ${SENDTOEMAIL}" > $TOMAILFILE
+  echo "From: ${SENDTOEMAIL}" >> $TOMAILFILE
+  echo "Subject: NRG-${SHORTADDR} - $1 " >> $TOMAILFILE
+  echo ""  >> $TOMAILFILE
+  echo "Current Balance: ${CURRENTBAL} NRG" >> $TOMAILFILE
+  echo "Reward Amount:   ${REWARDAMT} NRG" >> $TOMAILFILE
+  echo "Market Price:    ${NRGPRICE}" >> $TOMAILFILE
+
+  echo "" >> $TOMAILFILE
+}
+
+SEND_SMS () {
+    # Compose SMS Message
+    echo "To: ${SENDTOMOBILE}@${SENDTOGATEWAY}" > $TOSMSFILE
+    echo "From: ${SENDTOEMAIL}" >> $TOSMSFILE
+    echo "Subject: NRG-${SHORTADDR}" >> $TOSMSFILE
+    echo ""  >> $TOSMSFILE
+    echo "Amt Rcvd: ${REWARDAMT}" >> $TOSMSFILE
+
+    # Send email
+    log "${SHORTADDR}: Send email & SMS"
+    ssmtp ${SENDTOEMAIL} < $TOMAILFILE
+    ssmtp ${SENDTOMOBILE}@${SENDTOGATEWAY} < $TOSMSFILE
 }
 
  PROCESS_MESSAGES () {
@@ -1612,15 +1668,36 @@ ${RKHUNTER_OUTPUT}"
       LISTACCOUNTS=$( $COMMAND} "personal.listAccounts" 2>/dev/null | jq -r '.[]' )
   fi
   
+  
+  # save miner in array
+  CHKBLOCK=${LASTCHKBLOCK}
+  while [[ $( echo "$CHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1 ]]
+  do
+    MINER[${CHKBLOCK}]=$( ${COMMAND} "nrg.getBlock($CHKBLOCK).miner" 2>/dev/null | jq -r '.' | tr '[:upper:]' '[:lower:]' )
+    ((CHKBLOCK++))
+
+  done
+  
   # Get total balance in the wallet.
   GETTOTALBALANCE=0
   GETBALANCE=0
   ACCTBALANCE=0
+  
+  NRGUSDPRICE=''
+  STARTMNBLK=''
+  ENDMNBLK=''
+  MNCOLLATERAL=''
+  
   #MASTERNODE=0
   
   for ADDR in ${LISTACCOUNTS}
   do
     
+    # Change address to lower case
+    ADDR=$( echo ${ADDR} | tr '[:upper:]' '[:lower:]' )
+    SHORTADDR=$( echo ${ADDR:2:6} )
+    
+    # Start from last checked block for ADDR
     CHKBLOCK=${LASTCHKBLOCK}
     
     # Get total staking account balance
@@ -1630,9 +1707,7 @@ ${RKHUNTER_OUTPUT}"
     # is a masternode?
     isADDRMN=$( ${COMMAND} "masternode.masternodeInfo('$ADDR').isAlive" 2>/dev/null )
     
-    # Change address to lower case
-    ADDR=$( echo ${ADDR} | tr '[:upper:]' '[:lower:]' )
-    
+    # If Masternode isAlive
     if [[ "${isADDRMN}" ]] && [[ ${MASTERNODE} -lt 2 ]]
     then
       MASTERNODE=2
@@ -1644,43 +1719,74 @@ ${RKHUNTER_OUTPUT}"
        
     while [[ $( echo "$CHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1  ]]
     do
-      BLOCKMINER=$( ${COMMAND} "nrg.getBlock($CHKBLOCK).miner" 2>/dev/null | jq -r '.' | tr '[:upper:]' '[:lower:]' )
+      BLOCKMINER=MINER[${CHKBLOCK}]
 
       # Update database if stake received
       if [[ ${ADDR} == ${BLOCKMINER} ]]
       then
         STAKERWD=Y
         REWARDTIME=$( ${COMMAND} "nrg.getBlock($CHKBLOCK).timestamp" 2>/dev/null )
+        
+        # Get price once
+        if [[ -z "${NRGUSDPRICE}" ]]
+        then
+          NRGUSDPRICE=$( curl -H "Accept: application/json" --connect-timeout 30 -s "https://min-api.cryptocompare.com/data/price?fsym=NRG&tsyms=USD" | jq .USD )
+        fi
 
         # No way to determine at the time. Assume default
         REWARDAMT=2.28
     
-        SQL_QUERY "INSERT INTO stake_rewards (stakeAddress, rewardTime, blockNum, Reward, nrgPrice) 
-          VALUES ('${ADDR}','${REWARDTIME}','${CHKBLOCK}','${REWARDAMT}', '${NRGUSDPRICE}');"
+        SQL_QUERY "INSERT INTO stake_rewards (stakeAddress, rewardTime, blockNum, Reward, balance, nrgPrice) 
+          VALUES ('${ADDR}','${REWARDTIME}','${CHKBLOCK}','${REWARDAMT}', '${ACCTBALANCE}', '${NRGUSDPRICE}');"
+        
+        if [[ ! -z ${RWDDATA} ]]
+        then
+          REWARDUTCTIME=$( date -d@$REWARDTIME +'%Y-%m-%d %H:%M:%S' )
+          echo "${REWARDUTCTIME}, ${CHKBLOCK}, S, ${ADDR}, ${ACCTBALANCE}, ${REWARDAMT}, ${NRGUSDPRICE}" >> ${RWDDATA}
+        fi
+        log "${SHORTADDR}: *** Stake received ***"
           
         _PAYLOAD="
 NRG Mkt Price: USD ${NRGUSDPRICE}
+Account: ${SHORTADDR}
 Stake Reward: ${REWARDAMT}"
 
+        # Post message
         PROCESS_NODE_MESSAGES "${DATADIR}" "stake_reward" "4" "${_PAYLOAD}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+        
+        # Send EMAIL / SMS if set in ngrmon.conf
+        if [[ "${SENDEMAIL}" = "Y" ]]
+        then
+          SEND_EMAIL "Stake received"
+        fi
+        if [[ "${SENDSMS}" = "Y" ]]
+        then
+          SEND_SMS "Stake received"
+        fi 
       fi
     
       # If Address is an MN
       if [[ ${isADDRMN} ]] & [[ -z ${ENDMNBLK} ]]
       then
-        MNCHKDONE=$( SQL_QUERY "SELECT mnBlocksReceived FROM mn_blocks WHERE mnAddress = '${ADDR}' IS NOT NULL;" )
-        MNCOLLATERAL=$( $COMMAND "web3.fromWei(masternode.masternodeInfo('$ADDR').collateral, 'energi')" 2>/dev/null | jq -r '.' )
+
+        if [[ -z ${MNCOLLATERAL} ]]
+        then
+          MNCOLLATERAL=$( $COMMAND "web3.fromWei(masternode.masternodeInfo('$ADDR').collateral, 'energi')" 2>/dev/null | jq -r '.' )
+        fi
+        
+        MNCHKDONE=$( SQL_QUERY "SELECT mnBlocksReceived FROM mn_blocks WHERE mnAddress = '${ADDR}';" )
         if [[ ${MNCHKDONE} == N ]]
         then
-          MNTOTALNRG=$( SQL_QUERY "SELECT mnTotalReward FROM mn_blocks WHERE mnAddress = '${ADDR}' IS NOT NULL;" )
-          STARTMNBLK=$( SQL_QUERY "SELECT startMnBlk FROM mn_blocks WHERE mnAddress = '${ADDR}' IS NOT NULL;" )
-          ENDMNBLK=$( SQL_QUERY "SELECT endMnBlk FROM mn_blocks WHERE mnAddress = '${ADDR}' IS NOT NULL;" )
+          MNTOTALNRG=$( SQL_QUERY "SELECT mnTotalReward FROM mn_blocks WHERE mnAddress = '${ADDR}';" )
+          STARTMNBLK=$( SQL_QUERY "SELECT startMnBlk FROM mn_blocks WHERE mnAddress = '${ADDR}';" )
+          ENDMNBLK=$( SQL_QUERY "SELECT endMnBlk FROM mn_blocks WHERE mnAddress = '${ADDR}';" )
           if [[ ${ENDMNBLK} -eq 0 ]]
           then
             ENDMNBLK=''
           fi
         fi
         
+        # Call txlistinternal API to get internal transactions
         TXLSTINT=$( curl -H "accept: application/json" -s "${NRGAPI}?module=account&action=txlistinternal&address=${ADDR}&startblock=${CHKBLOCK}&endblock=${CHKBLOCK}" )
         if [[ $(echo $TXLSTINT | jq -r '.message') == OK ]]
         then
@@ -1690,6 +1796,12 @@ Stake Reward: ${REWARDAMT}"
               STARTMNBLK=$CHKBLOCK
               MASTERNODE=2
               MNRWD=Y
+          fi
+          
+          # Get price once
+          if [[ -z "${NRGUSDPRICE}" ]]
+          then
+            NRGUSDPRICE=$( curl -H "Accept: application/json" --connect-timeout 30 -s "https://min-api.cryptocompare.com/data/price?fsym=NRG&tsyms=USD" | jq .USD )
           fi
 
           # Add rewards for block
@@ -1701,8 +1813,8 @@ Stake Reward: ${REWARDAMT}"
           REWARDTIME=$( ${COMMAND} "nrg.getBlock($CHKBLOCK).timestamp" 2>/dev/null )
        
           # Update database
-          SQL_QUERY "INSERT INTO mn_rewards (mnAddress, rewardTime, blockNum, Reward, nrgPrice)
-            VALUES ('${ADDR}','${REWARDTIME}','${CHKBLOCK}','${BLOCKSUMNRG}', '${NRGUSDPRICE}');"
+          SQL_QUERY "INSERT INTO mn_rewards (mnAddress, rewardTime, blockNum, Reward, balance, nrgPrice)
+            VALUES ('${ADDR}','${REWARDTIME}','${CHKBLOCK}','${BLOCKSUMNRG}', '${ACCTBALANCE}', '${NRGUSDPRICE}');"
 
           MNTOTALNRG=$( echo " ${MNTOTALNRG} + ${BLOCKSUMNRG} " | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//' )
     
@@ -1714,17 +1826,37 @@ Stake Reward: ${REWARDAMT}"
           then
               SQL_QUERY "REPLACE INTO mn_blocks (mnAddress, mnBlocksReceived, startMnBlk, endMnBlk, mnTotalReward) 
                 VALUES ('${ADDR}','Y', '${STARTMNBLK}', '${ENDMNBLK}', '${MNTOTALNRG}');" 
+                
+              if [[ ! -z ${RWDDATA} ]]
+              then
+                REWARDUTCTIME=$( date -d@$REWARDTIME +'%Y-%m-%d %H:%M:%S' )
+                echo "${REWARDUTCTIME}, ${CHKBLOCK}, M, ${ADDR}, ${MNCOLLATERAL}, ${MNTOTALNRG}, ${NRGUSDPRICE}" >> ${RWDDATA}
+              fi
+              log "${SHORTADDR}: *** Stake received ***"
               
               _MNREWARDS=$( SQL_REPORT "SELECT blockNum,Reward FROM mn_rewards WHERE blockNum BETWEEN ${STARTMNBLK} and ${ENDMNBLK};" )
+              
               _PAYLOAD="
               NRG Mkt Price: USD ${NRGUSDPRICE}
+              Account: ${SHORTADDR}
               Masternode Collateral: ${MNCOLLATERAL} NRG
               Masternode reward: ${MNTOTALNRG} NRG
-              ${_MNREWARDS}
               "
+              
+              # Post message
               PROCESS_NODE_MESSAGES "${DATADIR}" "mn_reward" "4" "${_PAYLOAD}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
               
-              # Temp - Move to after discord send
+              # Send EMAIL / SMS if set in ngrmon.conf
+              if [[ "${SENDEMAIL}" = "Y" ]]
+              then
+                SEND_EMAIL "Stake received"
+              fi
+              if [[ "${SENDSMS}" = "Y" ]]
+              then
+                SEND_SMS "Stake received"
+              fi              
+              
+              # Reset after message processed
               SQL_QUERY "UPDATE mn_blocks
                 SET mnBlocksReceived = 'S',
                     startMnBlk = '0',
@@ -1742,6 +1874,11 @@ Stake Reward: ${REWARDAMT}"
       SQL_QUERY "REPLACE INTO mn_blocks (mnAddress, mnBlocksReceived, startMnBlk, endMnBlk, mnTotalReward) 
         VALUES ('${ADDR}', 'N', '${STARTMNBLK}', '0', '${MNTOTALNRG}');"
       
+    fi
+    
+    if [[ ! ${STAKERWD} == Y ]] || [[ ! ${MNRWD} == Y  ]]
+    then
+       log "${SHORTADDR}: No stake reward"
     fi
     
   done
