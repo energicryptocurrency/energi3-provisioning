@@ -12,9 +12,11 @@
 # 
 # Version:
 #   1.0.0  20200416  ZAlam Initial Script
+#   1.0.2  20200423  ZAlam Bug fixes; Email & SMS integration
+#   1.0.3  20200424  ZAlam Updating report post
 #
 # Set script version
-NRGMONVER=1.0.1
+NRGMONVER=1.0.3
 
  : '
 # Run this file
@@ -24,25 +26,18 @@ NRGMONVER=1.0.1
 ```
 '
 
- # Simple guide
- # https://imgur.com/a/B8RMhHV
+ # sudo systemctl stop nrgmon.timer --now
+ # sudo systemctl disable nrgmon.timer
+ # sudo sqlite3 -batch /var/multi-masternode-data/nrgbot/nrgmon.db "REPLACE INTO variables values ( 'last_block_checked', '66060' );"
+ # sudo systemctl enable nrgmon.timer
+ # sudo systemctl start nrgmon.timer --now
  
  ### Drop mn_rewards table after sending notice
  ### SQL_QUERY "DROP TABLE IF EXISTS mn_rewards;"
  
  ###
- ### sqlite3 -header -csv /var/multi-masternode-data/nrgbot/nrgmon.db "select * from mn_rewards;" > $HOME/etc/mn_rewards.csv
- ### sqlite3 -header -csv /var/multi-masternode-data/nrgbot/nrgmon.db "select * from stake_rewards;" > $HOME/etc/stake_rewards.csv
- ###
- 
- ###
  ### SQL_QUERY "SELECT * FROM stake_rewards WHERE blockNumber >= ${LASTCHKBLOCK} AND < ${CURRENTBLKNUM} ;"
  ### SQL_QUERY "SELECT * FROM mn_rewards WHERE blockNumber BETWEEN ${STARTMNBLK} AND ${ENDMNBLK} ;"
- ###
- 
- ###
- ### SELECT DATETIME(rewardTime,'unixepoch') FROM stake_rewards WHERE blockNumber BETWEEN ${LASTCHKBLOCK} and ${CURRENTBLKNUM};
- ### SELECT DATETIME(rewardTime,'unixepoch'),blockNumber,mnBlockReward FROM mn_rewards WHERE blockNumber BETWEEN ${STARTMNBLK} and ${ENDMNBLK};
  ###
  
  # Load parameters from external conf file
@@ -81,13 +76,14 @@ NRGMONVER=1.0.1
  STAKEAMT="2.28"
  MNMINRWD="0.914"
  NRGAPI="https://explorer.energi.network/api"
+ GITAPI_URL="https://api.github.com/repos/energicryptocurrency/energi3/releases/latest"
  
  # Set variables
  MNTOTALNRG=0
  USRNAME=$( find /home -name nodekey  2>&1 | grep -v "Permission denied" | awk -F\/ '{print $3}' )
  export PATH=$PATH:/home/${USRNAME}/energi3/bin
- RWDDATA="/home/${USRNAME}/etc/reward_data.csv"
- LOGFILE="/home/${USRNAME}/log/nrg_monitor.log"
+ LOGDIR="/home/${USRNAME}/log"
+ LOGFILE="${LOGDIR}/nrgmon.log"
  
  # Set colors
  BLUE=$( tput setaf 4 )
@@ -114,14 +110,13 @@ NRGMONVER=1.0.1
       exit 0
     fi
   fi
-
  
  # Set datadir
  DATADIR=$( ps -ef | grep datadir | grep -v "grep datadir" | grep -v "color" )
  DATADIR=$( echo $DATADIR | awk -F'datadir' '{print $2}' | awk -F' ' '{print $1}' )
  
  # Attach command
- COMMAND="energi3 ${ARG} --datadir ${DATADIR} attach --exec"
+ COMMAND="energi3 ${ARG} --datadir ${DATADIR} attach --exec "
 
  # debug arg.
  DEBUG_OUTPUT=0
@@ -267,12 +262,7 @@ fi
  key TEXT PRIMARY KEY,
  value TEXT NOT NULL
 );"
-
- # Insert seed data; give poll 5 blocks from current
- CURRENTBLKNUM=$( ${COMMAND} "nrg.blockNumber" 2>/dev/null | jq -r '.' )
- CURRENTBLKNUM=$( echo ${CURRENTBLKNUM} - 5 | bc -l )
- SQL_QUERY "INSERT OR IGNORE INTO variables values ( 'last_block_checked', '${CURRENTBLKNUM}' );"
-
+ 
  # System logs.
  SQL_QUERY "CREATE TABLE IF NOT EXISTS system_log (
   name TEXT PRIMARY KEY,
@@ -321,12 +311,23 @@ fi
  mnTotalReward INTEGER
 );"
 
+ # Insert seed data; give poll 5 blocks from current
+ CURRENTBLKNUM=$( ${COMMAND} "nrg.blockNumber" 2>/dev/null | jq -r '.' )
+ CURRENTBLKNUM=$( echo "${CURRENTBLKNUM} - 5" | bc -l )
+ if [[ -S ${DATADIR}/energi3.ipc ]] && [[ ${CURRENTBLKNUM} -gt 0 ]]
+ then
+  SQL_QUERY "INSERT OR IGNORE INTO variables values ( 'last_block_checked', '${CURRENTBLKNUM}' );"
+ else
+  echo "energi3 is not running.  Exiting nrgmon."
+  exit 1
+ fi
+
  # Daemon_bin_name URL_to_logo Bot_name
  DAEMON_BIN_LUT="
 energi3 https://s2.coinmarketcap.com/static/img/coins/128x128/3218.png Energi Monitor
 "
 
- # Daemon_bin_name minimum_balance_to_stake staking_reward mn_reward confirmations cooloff_seconds networkhashps_multiplier ticker_name blocktime_seconds
+ # Daemon_bin_name minimum_balance_to_stake staking_reward mn_reward_factor confirmations cooloff_seconds networkhashps_multiplier ticker_name blocktime_seconds
  DAEMON_BALANCE_LUT="
 energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
 "
@@ -351,8 +352,17 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
   (( S > 0 )) && printf '%d sec ' "${S}"
 }
 
+ # Check if FIRST version is greater than SECOND version
+ _version_gt() { 
+ 
+   test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; 
+  
+}
+
  # Create a service that runs every minute.
  INSTALL_NRGMON_SERVICE () {
+ 
+  # Install nrgmon.sh
   if [[ -f "${HOME}/energi3/bin/nrgmon.sh" ]]
   then
     sudo cp "${HOME}/energi3/bin/nrgmon.sh" /var/multi-masternode-data/nrgbot/nrgmon.sh
@@ -375,6 +385,36 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
       fi
     done
   fi
+  
+  if [[ ! -d ${LOGDIR} ]]
+  then
+    mkdir -p ${LOGDIR}
+    chown ${USRNAME}:${USRNAME} ${LOGDIR}
+    touch ${LOGFILE}
+    chown ${USRNAME}:${USRNAME} ${LOGFILE}
+  fi
+  
+  # Setup log rotate
+  # Logs in $HOME/log will rotate automatically when it reaches 50M
+  if [ ! -f /etc/logrotate.d/nrgmon ]
+  then
+    echo "Setting up log maintenance for nrgmon"
+    sleep 0.3
+    cat << NRGMON_LOGROTATE | ${SUDO} tee /etc/logrotate.d/nrgmon >/dev/null
+${LOGDIR}/*.log {
+  su ${USRNAME} ${USRNAME}
+  rotate 3
+  minsize 50M
+  copytruncate
+  compress
+  missingok
+}
+NRGMON_LOGROTATE
+
+    logrotate -f /etc/logrotate.d/nrgmon
+  
+  fi
+  
 
   cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nrgmon.service >/dev/null
 [Unit]
@@ -550,6 +590,7 @@ PAYLOAD
       OUTPUT=$( curl -H "Content-Type: application/json" -s -X POST "${URL}" -d "${_PAYLOAD}" | sed '/^[[:space:]]*$/d' )
     fi
   fi
+  
   # If only errors get a return value.
   if [[ ! -z "${OUTPUT}" ]]
   then
@@ -1648,8 +1689,9 @@ ${RKHUNTER_OUTPUT}"
   MIN_STAKE=0
   STAKE_REWARD=0
   MASTERNODE_REWARD=0
+  MN_REWARD_FACTOR=0
   NET_HASH_FACTOR=0
-  TICKER_NAME='COIN'
+  TICKER_NAME='NRG'
   STAKE_REWARD_UPPER=0
   BLOCKTIME_SECONDS=60
   UPTIME_HUMAN=$( DISPLAYTIME "${UPTIME}" )
@@ -1659,7 +1701,7 @@ ${RKHUNTER_OUTPUT}"
   then
     MIN_STAKE=$( echo "${EXTRA_INFO}" | cut -d ' ' -f2 )
     STAKE_REWARD=$( echo "${EXTRA_INFO}" | cut -d ' ' -f3 )
-    MASTERNODE_REWARD=$( echo "${EXTRA_INFO}" | cut -d ' ' -f4 )
+    MN_REWARD_FACTOR=$( echo "${EXTRA_INFO}" | cut -d ' ' -f4 )
     NET_HASH_FACTOR=$( echo "${EXTRA_INFO}" | cut -d ' ' -f7 )
     TICKER_NAME=$( echo "${EXTRA_INFO}" | cut -d ' ' -f8 )
     BLOCKTIME_SECONDS=$( echo "${EXTRA_INFO}" | cut -d ' ' -f9 )
@@ -1683,13 +1725,14 @@ ${RKHUNTER_OUTPUT}"
     fi
   fi
 
-  # Report on masternode winner
+  # Get last checked block from database
   LASTCHKBLOCK=$( SQL_QUERY "SELECT value FROM variables WHERE key = 'last_block_checked';" )
+  
+  # Get list of accounts from core node
   if [[ -z ${LISTACCOUNTS} ]]
   then
       LISTACCOUNTS=$( $COMMAND} "personal.listAccounts" 2>/dev/null | jq -r '.[]' )
   fi
-  
   
   # save miner in array
   CHKBLOCK=${LASTCHKBLOCK}
@@ -1700,20 +1743,19 @@ ${RKHUNTER_OUTPUT}"
 
   done
   
-  # Get total balance in the wallet.
+  # Set parameters
   GETTOTALBALANCE=0
   GETBALANCE=0
-  ACCTBALANCE=0
-  
+  ACCTBALANCE=0  
   NRGUSDPRICE=''
-  STARTMNBLK=''
-  ENDMNBLK=''
-  MNCOLLATERAL=''
-  
-  #MASTERNODE=0
   
   for ADDR in ${LISTACCOUNTS}
   do
+    
+    # Reset parameter
+    STARTMNBLK=''
+    ENDMNBLK=''
+    REWARDTIME=''
     
     # Change address to lower case
     ADDR=$( echo ${ADDR} | tr '[:upper:]' '[:lower:]' )
@@ -1726,21 +1768,44 @@ ${RKHUNTER_OUTPUT}"
     ACCTBALANCE=$( $COMMAND "web3.fromWei(nrg.getBalance('$ADDR'), 'energi')" 2>/dev/null )
     GETBALANCE=$( echo "$GETBALANCE + $ACCTBALANCE" | bc -l )
     
-    # is a masternode?
-    isADDRMN=$( ${COMMAND} "masternode.masternodeInfo('$ADDR').isAlive" 2>/dev/null )
+    # Check if ADDR is a masternode
+    MNCOLLATERAL=$( $COMMAND "web3.fromWei(masternode.masternodeInfo('$ADDR').collateral, 'energi')" 2>/dev/null | jq -r '.' )
     
-    # If Masternode isAlive
-    if [[ "${isADDRMN}" ]] && [[ ${MASTERNODE} -lt 2 ]]
+    if [[ ${MNCOLLATERAL} -eq 0 ]]
     then
-      MASTERNODE=2
+      # Zero collatoral indicates not a masternode
+      MASTERNODE=0
       MNINFO=0
-    elif [[ ! "${isADDRMN}"  ]] && [[ ${MASTERNODE} -lt 1 ]]
-    then
+      mnShortAddress=''
+      isActiveMn="false"
+      isAliveMn="false"
+      
+    else
+      # ADDR is a masternode
       MASTERNODE=1
-    fi 
-       
+      
+      # Assume NOT Active
+      MNINFO=0
+      
+      # Set for reporting
+      mnShortAddress=${SHORTADDR}
+
+      isActiveMn=$( ${COMMAND} "masternode.masternodeInfo('$ADDR').isActive" 2>/dev/null | jq '.' )
+      if [[ "${isActiveMn}" == 'true' ]]
+      then
+        # Not Alive
+        MNINFO=1
+        isAliveMn=$( ${COMMAND} "masternode.masternodeInfo('$ADDR').isAlive" 2>/dev/null | jq '.' )
+        if [[ "${isAliveMn}" == 'true' ]]
+        then
+          # Masternode Alive and Active
+          MNINFO=2
+        fi
+      fi
+    fi
+    
     while [[ $( echo "$CHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1  ]]
-    do
+    do     
       BLOCKMINER=${MINER[${CHKBLOCK}]}
 
       # Update database if stake received
@@ -1761,17 +1826,12 @@ ${RKHUNTER_OUTPUT}"
         SQL_QUERY "INSERT INTO stake_rewards (stakeAddress, rewardTime, blockNum, Reward, balance, nrgPrice) 
           VALUES ('${ADDR}','${REWARDTIME}','${CHKBLOCK}','${REWARDAMT}', '${ACCTBALANCE}', '${NRGUSDPRICE}');"
         
-        if [[ ! -z ${RWDDATA} ]]
-        then
-          REWARDUTCTIME=$( date -d@$REWARDTIME +'%Y-%m-%d %H:%M:%S' )
-          echo "${REWARDUTCTIME}, ${CHKBLOCK}, S, ${ADDR}, ${ACCTBALANCE}, ${REWARDAMT}, ${NRGUSDPRICE}" >> ${RWDDATA}
-        fi
         log "${SHORTADDR}: *** Stake received ***"
           
-        _PAYLOAD="
-NRG Mkt Price: USD ${NRGUSDPRICE}
-Account: ${SHORTADDR}
-Stake Reward: ${REWARDAMT}"
+        _PAYLOAD="__Account: ${SHORTADDR}__
+Mkt Price: USD ${NRGUSDPRICE}
+Account Balance: ${ACCTBALANCE} NRG
+Stake Reward: ${REWARDAMT} NRG"
 
         # Post message
         PROCESS_NODE_MESSAGES "${DATADIR}" "stake_reward" "4" "${_PAYLOAD}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
@@ -1788,24 +1848,15 @@ Stake Reward: ${REWARDAMT}"
       fi
     
       # If Address is an MN
-      if [[ ${isADDRMN} ]] & [[ -z ${ENDMNBLK} ]]
+      if [[ "${isAliveMn}" == 'true' ]] && [[ -z ${ENDMNBLK} ]]
       then
-
-        if [[ -z ${MNCOLLATERAL} ]]
-        then
-          MNCOLLATERAL=$( $COMMAND "web3.fromWei(masternode.masternodeInfo('$ADDR').collateral, 'energi')" 2>/dev/null | jq -r '.' )
-        fi
         
         MNCHKDONE=$( SQL_QUERY "SELECT mnBlocksReceived FROM mn_blocks WHERE mnAddress = '${ADDR}';" )
         if [[ ${MNCHKDONE} == N ]]
         then
           MNTOTALNRG=$( SQL_QUERY "SELECT mnTotalReward FROM mn_blocks WHERE mnAddress = '${ADDR}';" )
           STARTMNBLK=$( SQL_QUERY "SELECT startMnBlk FROM mn_blocks WHERE mnAddress = '${ADDR}';" )
-          ENDMNBLK=$( SQL_QUERY "SELECT endMnBlk FROM mn_blocks WHERE mnAddress = '${ADDR}';" )
-          if [[ ${ENDMNBLK} -eq 0 ]]
-          then
-            ENDMNBLK=''
-          fi
+          ENDMNBLK=''
         fi
         
         # Call txlistinternal API to get internal transactions
@@ -1815,9 +1866,8 @@ Stake Reward: ${REWARDAMT}"
 
           if [[ -z $STARTMNBLK ]]
           then
-              STARTMNBLK=$CHKBLOCK
-              MASTERNODE=2
-              MNRWD=Y
+            STARTMNBLK=$CHKBLOCK
+            MNRWD=Y
           fi
           
           # Get price once
@@ -1831,79 +1881,66 @@ Stake Reward: ${REWARDAMT}"
           BLOCKSUMWEI=$( printf "%.0f" $BLOCKSUMWEI )
           BLOCKSUMNRG=$( echo " ${BLOCKSUMWEI} / 1000000000000000000 " | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//' )
           
+          # Masternode reward based on collateral
+          MASTERNODE_REWARD=$( echo "${MN_REWARD_FACTOR} * ${MNCOLLATERAL} / 1000" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//' )
+          
           # Time of block generation
-          REWARDTIME=$( ${COMMAND} "nrg.getBlock($CHKBLOCK).timestamp" 2>/dev/null )
+          if [[ -z ${REWARDTIME} ]]
+          then
+            REWARDTIME=$( ${COMMAND} "nrg.getBlock($CHKBLOCK).timestamp" 2>/dev/null )
+          fi
        
           # Update database
           SQL_QUERY "INSERT INTO mn_rewards (mnAddress, rewardTime, blockNum, Reward, balance, nrgPrice)
             VALUES ('${ADDR}','${REWARDTIME}','${CHKBLOCK}','${BLOCKSUMNRG}', '${ACCTBALANCE}', '${NRGUSDPRICE}');"
 
           MNTOTALNRG=$( echo " ${MNTOTALNRG} + ${BLOCKSUMNRG} " | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//' )
+          
+          SQL_QUERY "REPLACE INTO mn_blocks (mnAddress, mnBlocksReceived, startMnBlk, endMnBlk, mnTotalReward) 
+            VALUES ('${ADDR}', 'N', '${STARTMNBLK}', '0', '${MNTOTALNRG}');"
     
-        elif [[ ${isADDRMN} ]] && [[ ! -z $STARTMNBLK ]] && [[ $(echo $TXLSTINT | jq '.message' | awk '{print $2}' ) == internal ]] && [[ -z ${ENDMNBLK} ]]
+        elif  [[ ! -z $STARTMNBLK ]] && [[ -z ${ENDMNBLK} ]] && [[ $(echo $TXLSTINT | jq '.message' | awk '{print $2}' ) == internal ]]
         then
           # All consecutive masternode payout blocks were found
           ENDMNBLK=$CHKBLOCK
           if [[ ! -z $MNTOTALNRG ]]
           then
-              SQL_QUERY "REPLACE INTO mn_blocks (mnAddress, mnBlocksReceived, startMnBlk, endMnBlk, mnTotalReward) 
-                VALUES ('${ADDR}','Y', '${STARTMNBLK}', '${ENDMNBLK}', '${MNTOTALNRG}');" 
-                
-              if [[ ! -z ${RWDDATA} ]]
-              then
-                REWARDUTCTIME=$( date -d@$REWARDTIME +'%Y-%m-%d %H:%M:%S' )
-                echo "${REWARDUTCTIME}, ${CHKBLOCK}, M, ${ADDR}, ${MNCOLLATERAL}, ${MNTOTALNRG}, ${NRGUSDPRICE}" >> ${RWDDATA}
-              fi
-              log "${SHORTADDR}: *** Stake received ***"
-              
-              # Get price once
-              if [[ -z "${NRGUSDPRICE}" ]]
-              then
-                NRGUSDPRICE=$( curl -H "Accept: application/json" --connect-timeout 30 -s "https://min-api.cryptocompare.com/data/price?fsym=NRG&tsyms=USD" | jq .USD )
-              fi
-              
-              _MNREWARDS=$( SQL_REPORT "SELECT blockNum,Reward FROM mn_rewards WHERE blockNum BETWEEN ${STARTMNBLK} and ${ENDMNBLK};" )
-              
-              _PAYLOAD="
-              NRG Mkt Price: USD ${NRGUSDPRICE}
-              Account: ${SHORTADDR}
-              Masternode Collateral: ${MNCOLLATERAL} NRG
-              Masternode reward: ${MNTOTALNRG} NRG
-              ${_MNREWARDS}
-              "
-              
-              # Post message
-              PROCESS_NODE_MESSAGES "${DATADIR}" "mn_reward" "4" "${_PAYLOAD}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
-              
-              # Send EMAIL / SMS if set in ngrmon.conf
-              if [[ "${SENDEMAIL}" = "Y" ]]
-              then
-                SEND_EMAIL "Stake received"
-              fi
-              if [[ "${SENDSMS}" = "Y" ]]
-              then
-                SEND_SMS "Stake received"
-              fi              
-              
-              # Reset after message processed
-              #SQL_QUERY "UPDATE mn_blocks
-              #  SET mnBlocksReceived = 'S',
-              #      startMnBlk = '0',
-              #      endMnBlk = '0'
-              #  WHERE mnAddress = '${ADDR}';"
+            SQL_QUERY "REPLACE INTO mn_blocks (mnAddress, mnBlocksReceived, startMnBlk, endMnBlk, mnTotalReward) 
+              VALUES ('${ADDR}','Y', '${STARTMNBLK}', '${ENDMNBLK}', '${MNTOTALNRG}');" 
+
+            log "${SHORTADDR}: *** Stake received ***"
+            
+            # Get price once
+            if [[ -z "${NRGUSDPRICE}" ]]
+            then
+              NRGUSDPRICE=$( curl -H "Accept: application/json" --connect-timeout 30 -s "https://min-api.cryptocompare.com/data/price?fsym=NRG&tsyms=USD" | jq .USD )
+            fi
+            
+            _MNREWARDS=$( SQL_REPORT "SELECT blockNum,Reward FROM mn_rewards WHERE blockNum BETWEEN ${STARTMNBLK} and ${ENDMNBLK};" )
+            
+            _PAYLOAD="__Account: ${SHORTADDR}__
+Mkt Price: USD ${NRGUSDPRICE}
+Masternode Collateral: ${MNCOLLATERAL} NRG
+Masternode reward: ${MNTOTALNRG} NRG
+${_MNREWARDS}"
+            
+            # Post message
+            PROCESS_NODE_MESSAGES "${DATADIR}" "mn_reward" "4" "${_PAYLOAD}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+            
+            # Send EMAIL / SMS if set in ngrmon.conf
+            if [[ "${SENDEMAIL}" = "Y" ]]
+            then
+              SEND_EMAIL "Stake received"
+            fi
+            if [[ "${SENDSMS}" = "Y" ]]
+            then
+              SEND_SMS "Stake received"
+            fi
           fi
         fi
       fi 
       ((CHKBLOCK++))      
     done
-
-    if [[ ${isADDRMN} ]] && [[ -z ${ENDMNBLK} ]]
-    then
-      # Not all consecutive blocks were found
-      SQL_QUERY "REPLACE INTO mn_blocks (mnAddress, mnBlocksReceived, startMnBlk, endMnBlk, mnTotalReward) 
-        VALUES ('${ADDR}', 'N', '${STARTMNBLK}', '0', '${MNTOTALNRG}');"
-      
-    fi
     
     if [[ ! ${STAKERWD} == Y ]] || [[ ! ${MNRWD} == Y  ]]
     then
@@ -1912,52 +1949,43 @@ Stake Reward: ${REWARDAMT}"
     
   done
   
+  # Get total on node
+  GETTOTALBALANCE=$( echo "$GETBALANCE + $MNCOLLATERAL" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//' )
+  
   # Check staking status.
   STAKING=0
   GETSTAKINGSTATUS="false"
   if [[ $( echo "${GETBALANCE} > 0" | bc -l ) -gt 0 ]]
   then
     GETSTAKINGSTATUS=$( ${COMMAND} "miner.stakingStatus().staking" 2>/dev/null )
-    if [[ ${GETSTAKINGSTATUS} ]]
+    if [[ "${GETSTAKINGSTATUS}" == 'true' ]]
     then
       STAKING=1
     fi
   fi
   
-  # Get total on node
-  GETTOTALBALANCE=$( echo "$GETBALANCE + $MNCOLLATERAL" | bc -l )
+    
+  # Update last_block_checked for next iteration
+  SQL_QUERY "REPLACE INTO variables (key,value) VALUES ('last_block_checked','${CURRENTBLKNUM}');"
   
   # Masternode Status.
   if [[ ${MASTERNODE} -eq 1 ]]
   then
-    if [[ ${MNINFO} -eq 1 ]]
+    if [[ ${MNINFO} -eq 0 ]]
     then
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "3" "__${USRNAME} ${DAEMON_BIN}__
-Masternode should be starting up soon." "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "1" "__Account: ${mnShortAddress}__
+Masternode is Offline" "Masternode Offline" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+    elif [[ ${MNINFO} -eq 1 ]]
+    then
+      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "1" "__Account: ${mnShortAddress}__
+Masternode is Active but NOT Alive" "Masternode NOT Alive" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
     elif [[ ${MNINFO} -eq 2 ]]
     then
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "2" "__${USRNAME} ${DAEMON_BIN}__
-Masternode list shows the masternode as active bug masternode status doesn't. Hopefully this changes soon." "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
-    else
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "1" "__${USRNAME} ${DAEMON_BIN}__
-Masternode is not currently running." "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
-    fi
-  elif [[ ${MASTERNODE} -eq 2 ]]
-  then
-    if [[ ${MNINFO} -eq 2 ]]
-    then
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "5" "__${USRNAME} ${DAEMON_BIN}__
-Masternode status and masternode list are good!" "Masternode Running" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
-    elif [[ ${MNINFO} -eq 0 ]]
-    then
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "5" "__${USRNAME} ${DAEMON_BIN}__
-Masternode status is good!" "Masternode Running" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "4" "__Account: ${mnShortAddress}__
+Masternode is Active and Alive!" "Masternode Alive" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
     fi
   fi
 
-    
-  # Update last_block_checked for next iteration
-  SQL_QUERY "REPLACE INTO variables (key,value) VALUES ('last_block_checked','${CURRENTBLKNUM}');"
 
   # Report on uptime
   PAST_UPTIME=$( SQL_QUERY "SELECT value FROM variables WHERE key = '${DATADIR}:uptime';" )
@@ -1974,12 +2002,12 @@ past uptime: ${PAST_UPTIME}"
     if [[ "${PAST_UPTIME}" -lt 300 ]]
     then
       SEND_ERROR "__${USRNAME} ${DAEMON_BIN}__
-Daemon was restarted mutiple times in the last 5 minutes.
+Daemon was restarted mutiple times in the last 5 minutes
 Past uptime: ${PAST_UPTIME_HUMAN}
 New uptime: ${UPTIME_HUMAN} " "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
     else
       SEND_WARNING "__${USRNAME} ${DAEMON_BIN}__
-Daemon was restarted.
+Daemon was restarted
 Past uptime: ${PAST_UPTIME_HUMAN}
 New uptime: ${UPTIME_HUMAN}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
     fi
@@ -1995,7 +2023,7 @@ New uptime: ${UPTIME_HUMAN}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK
   else
     SQL_QUERY "REPLACE INTO variables (key,value) VALUES ('${DATADIR}:balance','${GETTOTALBALANCE}');"
   fi
-  BALANCE_DIFF=$( echo "${GETTOTALBALANCE} - ${PAST_BALANCE}" | bc -l )
+  BALANCE_DIFF=$( echo "${GETTOTALBALANCE} - ${PAST_BALANCE}" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//' )
 
   # Empty Wallet.
   if [[ $( echo "${BALANCE_DIFF} != 0 " | bc -l ) -eq 0 ]]
@@ -2014,14 +2042,14 @@ After: ${GETTOTALBALANCE} " "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_
   elif [[ $( echo "${BALANCE_DIFF} < -1" | bc -l ) -gt 0 ]]
   then
     SEND_WARNING "__${USRNAME} ${DAEMON_BIN}__
-Balance has decreased by over 1 ${TICKER_NAME} Difference: ${BALANCE_DIFF}.
+Balance has decreased by over 1 ${TICKER_NAME} Difference: ${BALANCE_DIFF}
 New Balance: ${GETTOTALBALANCE}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
 
   # Small amount has been moved.
   elif [[ $( echo "${BALANCE_DIFF} < 1" | bc -l ) -gt 0 ]]
   then
     SEND_INFO "__${USRNAME} ${DAEMON_BIN}__
-Small amout of ${TICKER_NAME} has been transfered Difference: ${BALANCE_DIFF}.
+Small amout of ${TICKER_NAME} has been transfered Difference: ${BALANCE_DIFF}
 New Balance: ${GETTOTALBALANCE}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
 
   # More than 1 Coin has been added.
@@ -2029,17 +2057,15 @@ New Balance: ${GETTOTALBALANCE}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEB
   then
     if [[ $( echo "${BALANCE_DIFF} == ${MASTERNODE_REWARD}" | bc -l ) -eq 1 ]]
     then
-      SEND_SUCCESS "__${USRNAME} ${DAEMON_BIN}__
-Masternode reward amout of ${BALANCE_DIFF} ${TICKER_NAME}.
-New Balance: ${GETTOTALBALANCE}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+      : # Do nothing
+      
     elif [[ $( echo "${BALANCE_DIFF} >= ${STAKE_REWARD}" | bc -l ) -gt 0 ]] && [[ $( echo "${BALANCE_DIFF} < ${STAKE_REWARD_UPPER}" | bc -l ) -gt 0 ]]
     then
-      SEND_SUCCESS "__${USRNAME} ${DAEMON_BIN}__
-Staking reward amout of ${BALANCE_DIFF} ${TICKER_NAME}.
-New Balance: ${GETTOTALBALANCE}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+      : # Do nothing
+      
     else
       SEND_SUCCESS "__${USRNAME} ${DAEMON_BIN}__
-Larger amout of ${TICKER_NAME} has been transfered Difference: ${BALANCE_DIFF}.
+Larger amout of ${TICKER_NAME} has been transfered Difference: ${BALANCE_DIFF}
 New Balance: ${GETTOTALBALANCE}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
     fi
   fi
@@ -2082,9 +2108,8 @@ ${GETBALANCE} < ${MIN_STAKE} " "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHO
 Has enough coins to stake now!" "Balance is above the minimum" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
       if [[ "${STAKING}" -eq 0 ]]
       then
-        GETSTAKINGSTATUS=$( su "${USRNAME}" -c "\"${COMMAND}\" miner.stakingStatus().staking\" 2>/dev/null" )
         PROCESS_NODE_MESSAGES "${DATADIR}" "staking_status" "2" "__${USRNAME} ${DAEMON_BIN}__
-${GETSTAKINGSTATUS}" "" "" "" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+Staking status is FALSE" "Staking is disable" "" "" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
       fi
       if [[ "${STAKING}" -eq 1 ]]
       then
@@ -2112,23 +2137,42 @@ Staking status is now TRUE!" "Staking is enabled" "${DISCORD_WEBHOOK_USERNAME}" 
   then
     STAKING_TEXT='Enabled'
   fi
+  
   MASTERNODE_TEXT='Disabled'
-  if [[ ${MASTERNODE} -eq 2 ]]
+  if [[ ${MASTERNODE} -eq 1 ]]
   then
-    MASTERNODE_TEXT='Enabled but not enabled in masternode list'
-    if [[ ${MNINFO} -eq 2 ]]
+    MASTERNODE_TEXT='Offline'
+    if [[ ${MNINFO} -eq 1 ]]
+    then
+      MASTERNODE_TEXT='Inactive'
+    elif [[ ${MNINFO} -eq 2 ]]
     then
       MASTERNODE_TEXT='Enabled'
     fi
   fi
+  
+  # Check Github for URL of latest version
+  GIT_VERSION=$( curl -s ${GITAPI_URL} | jq -r '.tag_name' )
+  # Extract latest version number without the 'v'
+  GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
+  
+  if _version_gt ${GIT_LATEST} ${VERSION}
+  then
+    UPGRADE_TEXT="YES"
+    SEND_WARNING "__${USRNAME} ${DAEMON_BIN}__
+Upgrade REQUIRED. Installed Version: ${VERSION}. Git Version: ${GIT_LATEST}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+  else
+    UPGRADE_TEXT="No"
+  fi
 
-  _PAYLOAD="__${USRNAME} ${DAEMON_BIN} ${DATADIR}__
+  _PAYLOAD="__${USRNAME} ${DAEMON_BIN}__
 BlockCount: ${GETBLOCKCOUNT}
 Connections: ${GETCONNECTIONCOUNT}
 Staking Status: ${STAKING_TEXT}
 Masternode Status: ${MASTERNODE_TEXT}
+Upgrade Required: ${UPGRADE_TEXT}
 PID: ${DAEMON_PID}
-Uptime: ${UPTIME} seconds (${UPTIME_HUMAN})"
+Uptime: $( DISPLAYTIME "${UPTIME}" )"
 
 #  if [[ ! -z "${GETBALANCE}" ]] && [[ "$( echo "${GETBALANCE} > 0.0" | bc -l )" -gt 0 ]]
 #  then
@@ -2153,8 +2197,8 @@ Uptime: ${UPTIME} seconds (${UPTIME_HUMAN})"
   DAEMON_PID=${5}
   UPTIME=${6}
 
-  # GETBALANCE=0
-  # GETTOTALBALANCE=0
+  GETBALANCE=0
+  GETTOTALBALANCE=0
   # is the daemon running.
   if [[ -z "${DAEMON_PID}" ]]
   then
@@ -2179,7 +2223,7 @@ Uptime: ${UPTIME} seconds (${UPTIME_HUMAN})"
   fi
 
   # Get the version number.
-  VERSION=$( "energi3" version  2>/dev/null | grep \"^Version:\" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' )
+  VERSION=$( energi3 version  2>/dev/null | grep "^Version:" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' )
   if [[ -z "${VERSION}" ]]
   then
     VERSION=$( ${COMMAND} "admin.nodeInfo.name" 2>/dev/null | awk -F\/ '{print $2}' | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' )
@@ -2198,24 +2242,14 @@ Uptime: ${UPTIME} seconds (${UPTIME_HUMAN})"
   fi
 
   # Check networkhashps
-  GETNETHASHRATE=$( su "${USRNAME}" -c "\"${COMMAND}\" \" miner.getHashrate()" 2>/dev/null | grep -Eo '[+-]?[0-9]+([.][0-9]+)?' 2>/dev/null )
+  GETNETHASHRATE=$( ${COMMAND} "miner.getHashrate()" 2>/dev/null | grep -Eo '[+-]?[0-9]+([.][0-9]+)?' 2>/dev/null )
   if [[ -z "${GETNETHASHRATE}" ]]
   then
     GETNETHASHRATE=0
   fi
   
-  if [[ -z ${MASTERNODE} ]]
-  then
-     MASTERNODE=0
-  fi
-  
-  if [[ -z ${MNINFO} ]]
-  then
-     MNINFO=0
-  fi
-
   # Output info.
-  REPORT_INFO_ABOUT_NODE "${USRNAME}" "${DAEMON_BIN}" "${DATADIR}" "${MASTERNODE}" "${MNINFO}" "${GETBALANCE}" "${GETTOTALBALANCE}" "${STAKING}" "${GETCONNECTIONCOUNT}" "${GETBLOCKCOUNT}" "${UPTIME}" "${DAEMON_PID}" "${GETNETHASHRATE}" "${MNWIN}" "${VERSION}"
+  REPORT_INFO_ABOUT_NODE "${USRNAME}" "${DAEMON_BIN}" "${DATADIR}" "0" "0" "${GETBALANCE}" "${GETTOTALBALANCE}" "${STAKING}" "${GETCONNECTIONCOUNT}" "${GETBLOCKCOUNT}" "${UPTIME}" "${DAEMON_PID}" "${GETNETHASHRATE}" "${MNWIN}" "${VERSION}"
 }
 
  GET_NODE_INFO () {
@@ -2233,23 +2267,13 @@ Uptime: ${UPTIME} seconds (${UPTIME_HUMAN})"
     FILENAME_WITH_FUNCTIONS='/home/ubuntu/.bashrc'
   fi
 
-  LSLOCKS=$( lslocks -n -o COMMAND,PID,PATH | grep -v ' /run/' )
+  #LSLOCKS=$( lslocks -n -o COMMAND,PID,PATH | grep -v ' /run/' )
   PS_LIST=$( ps --no-headers -axo user:32,pid,etimes,command )
 
-  USR_HOME_DIR=$( grep nrgstaker /etc/passwd | awk -F: '{print $6}' )
+  USR_HOME_DIR=$( grep ${USRNAME} /etc/passwd | awk -F: '{print $6}' )
   if [[ "${USR_HOME_DIR}" == 'X' ]]
   then
     USR_HOME_DIR=${USR_HOME_DIR_ALT}
-  fi
-
-  if [[ "${#USR_HOME_DIR}" -lt 3 ]] || [[ ${USR_HOME_DIR} == /var/* ]] || [[ ${USR_HOME_DIR} == '/proc' ]] || [[ ${USR_HOME_DIR} == '/dev' ]] || [[ ${USR_HOME_DIR} == /run/* ]] || [[ ${USR_HOME_DIR} == '/nonexistent' ]]
-  then
-    continue
-  fi
-
-  if [[ ! -d "${USR_HOME_DIR}" ]]
-  then
-    continue
   fi
 
   MN_USRNAME=$( basename "${USR_HOME_DIR}" )
@@ -2257,88 +2281,74 @@ Uptime: ${UPTIME} seconds (${UPTIME_HUMAN})"
   DAEMON_BIN=''
   CONTROLLER_BIN=''
 
-  CONF_LOCATIONS=$( find "${USR_HOME_DIR}" -name "nodekey" 2>/dev/null | grep -v "Permission denied" )
+  #CONF_LOCATIONS=$( find "${USR_HOME_DIR}" -name "energi3.ipc" 2>/dev/null | grep -v "Permission denied" )
+  CONF_LOCATIONS=${DATADIR}
   if [[ -z "${CONF_LOCATIONS}" ]]
+  then
+    : # Do nothing
+  fi
+  CONF_FOLDER=$( dirname "${CONF_LOCATIONS}" )
+
+
+  # Get daemon bin name and pid from lock in toml folder.
+  CONF_FOLDER=$( dirname "${CONF_LOCATION}" )
+  DAEMON_BIN=energi3
+  CONTROLLER_BIN="${DAEMON_BIN}"
+  DAEMON_PID=$( ps -ef | grep energi3 | grep -v "grep energi3" | grep -v "grep --color=auto energi3" | awk '{print $2}' )
+
+  # Get path to daemon bin.
+  if [[ ! -z "${DAEMON_PID}" ]]
+  then
+    DAEMON_BIN_LOC=$( ps -ef | grep energi3 | grep -v "grep energi3" | grep -v "grep --color=auto energi3" | awk '{print $8}' )
+    CONTROLLER_BIN_LOC="${DATADIR}"
+    COMMAND_FOLDER=$( dirname "${DAEMON_BIN_LOC}" )
+    CONTROLLER_BIN_FOLDER=$( find "${COMMAND_FOLDER}" -executable -type f 2>/dev/null | grep -Ei "${DAEMON_BIN}$" )
+    if [[ ! -z "${CONTROLLER_BIN_FOLDER}" ]]
+    then
+      CONTROLLER_BIN_LOC="${CONTROLLER_BIN_FOLDER}"
+    fi
+  fi
+  CONF_LOCATION=${CONTROLLER_BIN_LOC}
+  
+  UPTIME=0
+  if [[ ! -z "${DAEMON_PID}" ]]
+  then
+    UPTIME=$( echo "${PS_LIST}" | cut -c 32- | grep " ${DAEMON_PID} " | awk '{print $2}' | head -n 1 | awk '{print $1}' | grep -o '[0-9].*' )
+  fi
+
+  # Skip if filtered out
+  if [[ ! -z "${DAEMON_BIN_FILTER}" ]] && [[ "${DAEMON_BIN_FILTER}" != "${DAEMON_BIN}" ]]
   then
     continue
   fi
-  CONF_FOLDER=$( dirname "${CONF_LOCATIONS}" )
-  CONF_LOCATIONS=$( grep --include=\*.rpl -rl "rpc" "${CONF_FOLDER}" )
 
-  if [[ -z "${CONF_LOCATIONS}" ]] && [[ "$( grep -c "energi3 \"${MN_USRNAME}\"" "${FILENAME_WITH_FUNCTIONS}" )" -gt 0 ]]
+  if [[ "${DEBUG_OUTPUT}" -eq 1 ]]
   then
-    CONF_LOCATIONS=$( "${MN_USRNAME}" rpl )
+    echo
+    echo "+++++++++++++++++++++++++++++"
+    echo "Username: ${USRNAME}"
+    echo "MN Username: ${MN_USRNAME}"
+    echo "Cli: ${CONTROLLER_BIN} ${CONTROLLER_BIN_LOC}"
+    echo "Daemon: ${DAEMON_BIN} ${DAEMON_BIN_LOC}"
+    echo "Conf Location: ${CONF_LOCATION}"
+    echo "PID: ${DAEMON_PID}"
+    echo "Uptime: ${UPTIME}"
+    echo
   fi
 
-  while read -r CONF_LOCATION
-  do
-    FUNCTION_PARAMS=''
-    DAEMON_BIN_LOC=''
-    CONTROLLER_BIN_LOC=''
-    if [[ $( grep -ric "nomnmon" "${CONF_LOCATION}" ) -gt 0 ]]
-    then
-      continue
-    fi
-
-    # Get daemon bin name and pid from lock in toml folder.
-    CONF_FOLDER=$( dirname "${CONF_LOCATION}" )
-    DAEMON_BIN=$( echo "${LSLOCKS}" | grep -m 1 "${CONF_FOLDER}" | awk '{print $1}' )
-    CONTROLLER_BIN="${DAEMON_BIN}"
-    DAEMON_PID=$( echo "${LSLOCKS}" | grep -m 1 "${CONF_FOLDER}" | awk '{print $2}' )
-
-    # Get path to daemon bin.
-    if [[ ! -z "${DAEMON_PID}" ]]
-    then
-      DAEMON_BIN_LOC=$( echo "${PS_LIST}" | cut -c 32- | grep " ${DAEMON_PID} " | awk '{print $3}' )
-      CONTROLLER_BIN_LOC="${DAEMON_BIN_LOC}"
-      COMMAND_FOLDER=$( dirname "${DAEMON_BIN_LOC}" )
-      CONTROLLER_BIN_FOLDER=$( find "${COMMAND_FOLDER}" -executable -type f 2>/dev/null | grep -Ei "${DAEMON_BIN}$" )
-      if [[ ! -z "${CONTROLLER_BIN_FOLDER}" ]]
-      then
-        CONTROLLER_BIN_LOC="${CONTROLLER_BIN_FOLDER}"
-      fi
-    fi
-
-    UPTIME=0
-    if [[ ! -z "${DAEMON_PID}" ]]
-    then
-      UPTIME=$( echo "${PS_LIST}" | cut -c 32- | grep " ${DAEMON_PID} " | awk '{print $2}' | head -n 1 | awk '{print $1}' | grep -o '[0-9].*' )
-    fi
-
-    # Skip if filtered out
-    if [[ ! -z "${DAEMON_BIN_FILTER}" ]] && [[ "${DAEMON_BIN_FILTER}" != "${DAEMON_BIN}" ]]
-    then
-      continue
-    fi
-
+  # Skip if the controller bin or configuration is not a file.
+  if [[ ! -f "${CONTROLLER_BIN_LOC}" ]] || [[ ! -f "${CONF_LOCATION}" ]]
+  then
     if [[ "${DEBUG_OUTPUT}" -eq 1 ]]
     then
-      echo
-      echo "+++++++++++++++++++++++++++++"
-      echo "Username: ${USRNAME} ${MN_USRNAME}"
-      echo "Cli: ${CONTROLLER_BIN} ${CONTROLLER_BIN_LOC}"
-      echo "Daemon: ${DAEMON_BIN} ${DAEMON_BIN_LOC}"
-      echo "Conf Location: ${CONF_LOCATION}"
-      echo "PID: ${DAEMON_PID}"
-      echo "Uptime: ${UPTIME}"
+      echo "${CONTROLLER_BIN_LOC} or ${CONF_LOCATION} is not a file."
       echo
     fi
+    : # Do nothing
+  fi
 
-    # Skip if the controller bin or configuration is not a file.
-    if [[ ! -f "${CONTROLLER_BIN_LOC}" ]] || [[ ! -f "${CONF_LOCATION}" ]]
-    then
-      if [[ "${DEBUG_OUTPUT}" -eq 1 ]]
-      then
-        echo "${CONTROLLER_BIN_LOC} or ${CONF_LOCATION} is not a file."
-        echo
-      fi
-      #continue
-    fi
+  GET_INFO_ON_THIS_NODE "${USRNAME}" "${CONTROLLER_BIN_LOC}" "${DAEMON_BIN}" "${CONF_LOCATION}" "${DAEMON_PID}" "${UPTIME}"
 
-    GET_INFO_ON_THIS_NODE "${USRNAME}" "${CONTROLLER_BIN_LOC}" "${DAEMON_BIN}" "${CONF_LOCATION}" "${DAEMON_PID}" "${UPTIME}"
-  done <<< "${CONF_LOCATIONS}"
-
- 
 }
 
  NOT_CRON_WORKFLOW () {
