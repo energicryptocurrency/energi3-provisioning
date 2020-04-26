@@ -400,7 +400,7 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
   then
     echo "Setting up log maintenance for nrgmon"
     sleep 0.3
-    cat << NRGMON_LOGROTATE | ${SUDO} tee /etc/logrotate.d/nrgmon >/dev/null
+    cat << NRGMON_LOGROTATE | sudo tee /etc/logrotate.d/nrgmon >/dev/null
 ${LOGDIR}/*.log {
   su ${USRNAME} ${USRNAME}
   rotate 3
@@ -411,7 +411,7 @@ ${LOGDIR}/*.log {
 }
 NRGMON_LOGROTATE
 
-    logrotate -f /etc/logrotate.d/nrgmon
+    sudo logrotate -f /etc/logrotate.d/nrgmon
   
   fi
   
@@ -1002,13 +1002,13 @@ SEND_EMAIL () {
   # Compose Email Message
   echo "To: ${SENDTOEMAIL}" > $TOMAILFILE
   echo "From: ${SENDTOEMAIL}" >> $TOMAILFILE
-  echo "Subject: NRG-${SHORTADDR} - $1 " >> $TOMAILFILE
+  echo "Subject: NRG-${SHORTADDR} - ${1} " >> $TOMAILFILE
   echo ""  >> $TOMAILFILE
   echo "Current Balance: ${ACCTBALANCE} NRG" >> $TOMAILFILE
-  if [[ ! ${STAKERWD} == Y ]] 
+  if [[ ${STAKERWD} == Y ]] 
   then
     echo "Reward Amount:   ${REWARDAMT} NRG" >> $TOMAILFILE
-  elif [[ ! ${MNRWD} == Y  ]]
+  elif [[ ${MNRWD} == Y  ]]
   then
     echo "Reward Amount:   ${MNTOTALNRG} NRG" >> $TOMAILFILE
   fi
@@ -1034,7 +1034,13 @@ SEND_SMS () {
     echo "From: ${SENDTOEMAIL}" >> $TOSMSFILE
     echo "Subject: NRG-${SHORTADDR}" >> $TOSMSFILE
     echo ""  >> $TOSMSFILE
-    echo "Amt Rcvd: ${REWARDAMT}" >> $TOSMSFILE
+    if [[ ${STAKERWD} == Y ]] 
+    then
+      echo "Rwd: ${REWARDAMT}, Price: USD ${NRGUSDPRICE}" >> $TOSMSFILE
+    elif [[ ${MNRWD} == Y  ]]
+    then
+      echo "Rwd: ${MNTOTALNRG}, Price: USD ${NRGUSDPRICE}" >> $TOSMSFILE
+    fi
 
     # Send email
     log "${SHORTADDR}: Send SMS"
@@ -1830,7 +1836,7 @@ ${RKHUNTER_OUTPUT}"
           
         _PAYLOAD="__Account: ${SHORTADDR}__
 Mkt Price: USD ${NRGUSDPRICE}
-Account Balance: ${ACCTBALANCE} NRG
+New Balance: ${ACCTBALANCE} NRG
 Stake Reward: ${REWARDAMT} NRG"
 
         # Post message
@@ -1920,8 +1926,8 @@ Stake Reward: ${REWARDAMT} NRG"
             
             _PAYLOAD="__Account: ${SHORTADDR}__
 Mkt Price: USD ${NRGUSDPRICE}
-Masternode Collateral: ${MNCOLLATERAL} NRG
-Masternode reward: ${MNTOTALNRG} NRG
+Mn Collateral: ${MNCOLLATERAL} NRG
+Mn reward: ${MNTOTALNRG} NRG
 ${_MNREWARDS}"
             
             # Post message
@@ -1930,11 +1936,11 @@ ${_MNREWARDS}"
             # Send EMAIL / SMS if set in ngrmon.conf
             if [[ "${SENDEMAIL}" = "Y" ]]
             then
-              SEND_EMAIL "Stake received"
+              SEND_EMAIL "Mn Rwd received"
             fi
             if [[ "${SENDSMS}" = "Y" ]]
             then
-              SEND_SMS "Stake received"
+              SEND_SMS "Mn Rwd received"
             fi
           fi
         fi
@@ -1981,7 +1987,7 @@ Masternode is Offline" "Masternode Offline" "${DISCORD_WEBHOOK_USERNAME}" "${DIS
 Masternode is Active but NOT Alive" "Masternode NOT Alive" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
     elif [[ ${MNINFO} -eq 2 ]]
     then
-      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "4" "__Account: ${mnShortAddress}__
+      PROCESS_NODE_MESSAGES "${DATADIR}" "masternode_status" "5" "__Account: ${mnShortAddress}__
 Masternode is Active and Alive!" "Masternode Alive" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
     fi
   fi
