@@ -35,12 +35,72 @@ SQL_REPORT () {
 sqlite3 -noheader -csv /var/multi-masternode-data/nrgbot/nrgmon.db "${1}"
 }
 
-# Generate CSV
-SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'M',mnAddress,balance,Reward,nrgPrice FROM mn_rewards;" > ${RPTTMPFILE}
-#SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,mnAddress,balance,Reward,nrgPrice FROM mn_rewards WHERE strftime('%m', rewardTime) = '04';"
+# Set colors
+BLUE=`tput setaf 4`
+RED=`tput setaf 1`
+GREEN=`tput setaf 2`
+YELLOW=`tput setaf 2`
+NC=`tput sgr0`
 
-SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'S',stakeAddress,balance,Reward,nrgPrice FROM stake_rewards;" >> ${RPTTMPFILE}
-#SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,stakeAddress,balance,Reward,nrgPrice FROM stake_rewards strftime('%m', `rewardTime`) = '04';"
+_instructions () {
+  echo "${GREEN}"
+  clear 2> /dev/null
+  cat << "ENERGI3"
+      ___      
+     /\  \     .  . ,-.   ,-. .   ,  ,-.  .  .   ,-.  ,--. ;-.   ,-.  ,-.  ,---.
+    /::\  \    |\ | |  ) /    |\ /| /   \ |\ |   |  ) |    |  ) /   \ |  )   |`
+   /:/\:\__\   | \| |-<  | -. | V | |   | | \|   |-<  |-   |-'  |   | |-<    |
+  /:/ /:/ _/_  |  | |  \ \  | |   | \   / |  |   |  \ |    |    \   / |  \   |
+ /:/ /:/ /\__\ '  ' '  '  `-' '   '  `-'  '  '   '  ' `--' '     `-'  '  '   '
+ \:\ \/ /:/  /
+ENERGI3
+echo "${GREEN}  \:\  /:/  /  ${NC}Options:"
+echo "${GREEN}   \:\/:/  /   ${NC}a - Extract all data"
+echo "${GREEN}    \::/  /    ${NC}b - Generate current month data (not working)"
+echo "${GREEN}     \/__/     ${NC}c - Custom dates (not working)"
+echo ${NC}
+}
+
+_instructions
+
+REPLY='a'
+read -p "Please select an option(a, b or c): " -r
+REPLY=${REPLY,,} # tolower
+if [ "${REPLY}" = "" ]
+then
+  REPLY='a'
+fi
+
+if [[ ! -d ${HOME}/etc ]]
+then
+  mkdir ${HOME}/etc
+fi
+
+# Generate CSV
+case ${REPLY} in
+
+  a)
+    SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'M',mnAddress,balance,Reward,nrgPrice FROM mn_rewards;" > ${RPTTMPFILE}
+
+    SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'S',stakeAddress,balance,Reward,nrgPrice FROM stake_rewards;" >> ${RPTTMPFILE}
+
+    ;;
+
+  b)
+    #SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,mnAddress,balance,Reward,nrgPrice FROM mn_rewards WHERE strftime('%m', rewardTime, unixepoch) = '04';"
+    #SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,stakeAddress,balance,Reward,nrgPrice FROM stake_rewards strftime('%m', rewardTime, unixepoch) = '04';"
+    echo ${REPLY}
+    ;;
+
+  c)
+    echo ${REPLY}
+    ;;
+
+  *)
+    echo "help"
+    ;;
+
+esac
 
 # Sort data
 sort ${RPTTMPFILE} > ${RPTFILE}
