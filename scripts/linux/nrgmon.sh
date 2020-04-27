@@ -14,9 +14,10 @@
 #   1.0.0  20200416  ZAlam Initial Script
 #   1.0.2  20200423  ZAlam Bug fixes; Email & SMS integration
 #   1.0.3  20200424  ZAlam Updating report post
+#   1.0.4  20200426  ZAlam Sudo, Telegram and other fixes
 #
 # Set script version
-NRGMONVER=1.0.3
+NRGMONVER=1.0.4
 
  : '
 # Run this file
@@ -415,6 +416,9 @@ NRGMON_LOGROTATE
   
   fi
   
+  cat << SUDO_CONF | sudo tee /etc/sudoers.d/nrgstaker >/dev/null
+nrgstaker ALL=NOPASSWD: ALL
+SUDO_CONF
 
   cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nrgmon.service >/dev/null
 [Unit]
@@ -615,9 +619,9 @@ PAYLOAD
   while :
   do
     echo
-    echo -en "${TEXT_A}s webhook url: \e[3m"
+    echo -en "${TEXT_A}s webhook url: "
     read -r -e -i "${DISCORD_WEBHOOK_URL}" input
-    printf "\e[0m"
+    #printf "\e[0m"
     DISCORD_WEBHOOK_URL="${input:-${DISCORD_WEBHOOK_URL}}"
     if [[ ! -z "${DISCORD_WEBHOOK_URL}" ]]
     then
@@ -762,14 +766,15 @@ ${MESSAGE}"
  # Install telegram bot.
  TELEGRAM_SETUP () {
   TOKEN=$( SQL_QUERY "SELECT value FROM variables WHERE key = 'telegram_token';" )
-  echo "Message the @botfather https://web.telegram.org/#/im?p=@BotFather"
-  echo "with the following text: "
-  echo "/start"
-  echo "/newbot"
-  echo "Then paste in the token below"
-  printf "Telegram Token: \e[3m"
-  read -r -e -i "${TOKEN}" -p
-  printf "\e[0m"
+
+  if [[ -z "${TOKEN}" ]]
+  then
+    TEXT_B="Enter"
+  else
+    TEXT_B="Replace"
+  fi
+  
+  read -p "${TEXT_B} Telegram Token [${TOKEN}]: " -r
   if [[ ! -z "${REPLY}" ]]
   then
     TOKEN="${REPLY}"
@@ -778,23 +783,25 @@ ${MESSAGE}"
   CHAT_ID=$( SQL_QUERY "SELECT value FROM variables WHERE key = 'telegram_chatid';" )
   if [[ -z "${CHAT_ID}" ]] || [[ "${CHAT_ID}" == 'null' ]]
   then
-    while :
+    IS_OK='false'
+    while [[ "${IS_OK}" == 'true' ]]
     do
       GET_UPDATES=$( curl -s "https://api.telegram.org/bot${TOKEN}/getUpdates" )
       IS_OK=$( echo "${GET_UPDATES}" | jq '.ok' )
       if [[ "${IS_OK}" != 'true' ]]
       then
-        echo "Please message the bot."
-        read -p "When done press enter or q to quit." -r
+        echo "Could not get a response from Telegram Bot."
+        echo "Login to Telegram and post a message to the bot."
+        read -p "Press ENTER to check again or q to quit." -r
         REPLY=${REPLY,,} # tolower
         if [[ "${REPLY}" == q ]]
         then
           return 1 2>/dev/null
+        else
+          break
         fi
-        sleep 1
-      else
-        break
       fi
+      sleep 3
     done
 
     while :
@@ -803,7 +810,7 @@ ${MESSAGE}"
       CHAT_ID=$( echo "${GET_UPDATES}" | jq '.result[0].message.chat.id' 2>/dev/null )
       if [[ -z "${CHAT_ID}" ]]
       then
-        echo "Please message the bot."
+        echo "Login to Telegram and post a message to the bot."
       else
         SQL_QUERY "REPLACE INTO variables (key,value) VALUES ('telegram_token','${TOKEN}');"
         SQL_QUERY "REPLACE INTO variables (key,value) VALUES ('telegram_chatid','${CHAT_ID}');"
@@ -1837,7 +1844,8 @@ ${RKHUNTER_OUTPUT}"
         _PAYLOAD="__Account: ${SHORTADDR}__
 Mkt Price: USD ${NRGUSDPRICE}
 New Balance: ${ACCTBALANCE} NRG
-Stake Reward: ${REWARDAMT} NRG"
+Stake Reward: ${REWARDAMT} NRG
+Block Number: ${CHKBLOCK}"
 
         # Post message
         PROCESS_NODE_MESSAGES "${DATADIR}" "stake_reward" "4" "${_PAYLOAD}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
@@ -2429,9 +2437,9 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
     REPLY='n'
     PREFIX='Redo'
   fi
-  echo -en "\e[3m${PREFIX} Telegram Bot token (y/n)?\e[0m "
+  echo -en "${PREFIX} Telegram Bot token (y/n)? "
   read -e -i "${REPLY}" -r
-  printf "\e[0m"
+  #printf "\e[0m"
   REPLY=${REPLY,,} # tolower
   if [[ "${REPLY}" == y ]]
   then
