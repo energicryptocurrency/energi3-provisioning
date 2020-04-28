@@ -23,7 +23,7 @@ NRGMONVER=1.0.4
 # Run this file
 
 ```
-  bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/nrgmon.sh)" ; source ~/.bashrc
+  bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/nodemon.sh)" ; source ~/.bashrc
 ```
 '
 
