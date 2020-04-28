@@ -17,7 +17,7 @@
 #   1.0.4  20200426  ZAlam Sudo, Telegram and other fixes
 #
 # Set script version
-NRGMONVER=1.0.4
+NODEMONVER=1.0.5
 
  : '
 # Run this file
@@ -27,11 +27,11 @@ NRGMONVER=1.0.4
 ```
 '
 
- # sudo systemctl stop nrgmon.timer --now
- # sudo systemctl disable nrgmon.timer
- # sudo sqlite3 -batch /var/multi-masternode-data/nrgbot/nrgmon.db "REPLACE INTO variables values ( 'last_block_checked', '66060' );"
- # sudo systemctl enable nrgmon.timer
- # sudo systemctl start nrgmon.timer --now
+ # sudo systemctl stop nodemon.timer --now
+ # sudo systemctl disable nodemon.timer
+ # sudo sqlite3 -batch /var/multi-masternode-data/nodebot/nodemon.db "REPLACE INTO variables values ( 'last_block_checked', '66060' );"
+ # sudo systemctl enable nodemon.timer
+ # sudo systemctl start nodemon.timer --now
  
  ### Drop mn_rewards table after sending notice
  ### SQL_QUERY "DROP TABLE IF EXISTS mn_rewards;"
@@ -42,9 +42,9 @@ NRGMONVER=1.0.4
  ###
  
  # Load parameters from external conf file
- if [[ -f /var/multi-masternode-data/nrgbot/nrgmon.conf ]]
+ if [[ -f /var/multi-masternode-data/nodebot/nodemon.conf ]]
  then
-  . /var/multi-masternode-data/nrgbot/nrgmon.conf
+  . /var/multi-masternode-data/nodebot/nodemon.conf
  else
   SENDEMAIL=N
   SENDSMS=N
@@ -84,7 +84,7 @@ NRGMONVER=1.0.4
  USRNAME=$( find /home -name nodekey  2>&1 | grep -v "Permission denied" | awk -F\/ '{print $3}' )
  export PATH=$PATH:/home/${USRNAME}/energi3/bin
  LOGDIR="/home/${USRNAME}/log"
- LOGFILE="${LOGDIR}/nrgmon.log"
+ LOGFILE="${LOGDIR}/nodemon.log"
  
  # Set colors
  BLUE=$( tput setaf 4 )
@@ -118,6 +118,24 @@ NRGMONVER=1.0.4
  
  # Attach command
  COMMAND="energi3 ${ARG} --datadir ${DATADIR} attach --exec "
+
+ # version arg.
+ VERSION_OUTPUT=0
+ if [[ "${arg1}" == 'version' ]]
+then
+  echo "Version: ${NODEMONVER}"
+  exit 0
+fi
+ if [[ "${arg2}" == 'version' ]]
+then
+  echo "Version: ${NODEMONVER}"
+  exit 0
+fi
+ if [[ "${arg3}" == 'version' ]]
+then
+  echo "Version: ${NODEMONVER}"
+  exit 0
+fi
 
  # debug arg.
  DEBUG_OUTPUT=0
@@ -210,7 +228,7 @@ then
   CPU_LOAD_WARN=2
 fi
 
- if [[ ! -f /var/multi-masternode-data/nrgbot/nrgmon.sh ]]
+ if [[ ! -f /var/multi-masternode-data/nodebot/nodemon.sh ]]
  then
     # APT update/upgrade if new install
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
@@ -245,16 +263,16 @@ fi
 
  # Run a sqlite query.
  SQL_QUERY () {
-  if [[ ! -d /var/multi-masternode-data/nrgbot ]]
+  if [[ ! -d /var/multi-masternode-data/nodebot ]]
   then
-    sudo mkdir -p /var/multi-masternode-data/nrgbot
+    sudo mkdir -p /var/multi-masternode-data/nodebot
   fi
-  sudo sqlite3 -batch /var/multi-masternode-data/nrgbot/nrgmon.db "${1}"
+  sudo sqlite3 -batch /var/multi-masternode-data/nodebot/nodemon.db "${1}"
 }
 
  # Formatted sqlite report
  SQL_REPORT () {
- sqlite3 -header -column -separator ROW /var/multi-masternode-data/nrgbot/nrgmon.db "${1}"
+ sqlite3 -header -column -separator ROW /var/multi-masternode-data/nodebot/nodemon.db "${1}"
 }
 
  # Create tables if they do not exist.
@@ -319,7 +337,7 @@ fi
  then
   SQL_QUERY "INSERT OR IGNORE INTO variables values ( 'last_block_checked', '${CURRENTBLKNUM}' );"
  else
-  echo "energi3 is not running.  Exiting nrgmon."
+  echo "energi3 is not running.  Exiting nodemon."
   exit 1
  fi
 
@@ -361,21 +379,21 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
 }
 
  # Create a service that runs every minute.
- INSTALL_NRGMON_SERVICE () {
+ INSTALL_NODEMON_SERVICE () {
  
-  # Install nrgmon.sh
-  if [[ -f "${HOME}/energi3/bin/nrgmon.sh" ]]
+  # Install nodemon.sh
+  if [[ -f "${HOME}/energi3/bin/nodemon.sh" ]]
   then
-    sudo cp "${HOME}/energi3/bin/nrgmon.sh" /var/multi-masternode-data/nrgbot/nrgmon.sh
+    sudo cp "${HOME}/energi3/bin/nodemon.sh" /var/multi-masternode-data/nodebot/nodemon.sh
   else
     COUNTER=0
-    sudo rm -f /var/multi-masternode-data/nrgbot/nrgmon.sh
-    while [[ ! -f /var/multi-masternode-data/nrgbot/nrgmon.sh ]] || [[ $( sudo grep -Fxc " # End of the masternode monitor script." /var/multi-masternode-data/nrgbot/nrgmon.sh ) -eq 0 ]]
+    sudo rm -f /var/multi-masternode-data/nodebot/nodemon.sh
+    while [[ ! -f /var/multi-masternode-data/nodebot/nodemon.sh ]] || [[ $( sudo grep -Fxc " # End of the masternode monitor script." /var/multi-masternode-data/nodebot/nodemon.sh ) -eq 0 ]]
     do
-      sudo rm -f /var/multi-masternode-data/nrgbot/nrgmon.sh
+      sudo rm -f /var/multi-masternode-data/nodebot/nodemon.sh
       echo "Downloading Masternode Setup Script."
-      sudo wget -q4o- https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/nrgmon.sh -O /var/multi-masternode-data/nrgbot/nrgmon.sh
-      sudo chmod 755 /var/multi-masternode-data/nrgbot/nrgmon.sh
+      sudo wget -q4o- https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/nodemon.sh -O /var/multi-masternode-data/nodebot/nodemon.sh
+      sudo chmod 755 /var/multi-masternode-data/nodebot/nodemon.sh
       COUNTER=$(( COUNTER+1 ))
       if [[ "${COUNTER}" -gt 3 ]]
       then
@@ -397,11 +415,11 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
   
   # Setup log rotate
   # Logs in $HOME/log will rotate automatically when it reaches 50M
-  if [ ! -f /etc/logrotate.d/nrgmon ]
+  if [ ! -f /etc/logrotate.d/nodemon ]
   then
-    echo "Setting up log maintenance for nrgmon"
+    echo "Setting up log maintenance for nodemon"
     sleep 0.3
-    cat << NRGMON_LOGROTATE | sudo tee /etc/logrotate.d/nrgmon >/dev/null
+    cat << NODEMON_LOGROTATE | sudo tee /etc/logrotate.d/nodemon >/dev/null
 ${LOGDIR}/*.log {
   su ${USRNAME} ${USRNAME}
   rotate 3
@@ -410,9 +428,9 @@ ${LOGDIR}/*.log {
   compress
   missingok
 }
-NRGMON_LOGROTATE
+NODEMON_LOGROTATE
 
-    sudo logrotate -f /etc/logrotate.d/nrgmon
+    sudo logrotate -f /etc/logrotate.d/nodemon
   
   fi
   
@@ -420,7 +438,7 @@ NRGMON_LOGROTATE
 nrgstaker ALL=NOPASSWD: ALL
 SUDO_CONF
 
-  cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nrgmon.service >/dev/null
+  cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nodemon.service >/dev/null
 [Unit]
 Description=Core Node Monitor
 After=syslog.target network.target
@@ -431,19 +449,19 @@ Type=oneshot
 Restart=no
 RestartSec=5
 UMask=0027
-ExecStart=/bin/bash -i /var/multi-masternode-data/nrgbot/nrgmon.sh cron
+ExecStart=/bin/bash -i /var/multi-masternode-data/nodebot/nodemon.sh cron
 
 [Install]
 WantedBy=multi-user.target
 SYSTEMD_CONF
 
-  cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nrgmon.timer >/dev/null
+  cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nodemon.timer >/dev/null
 [Unit]
 Description=Run Core Node Monitor Every 10 Minute
-Requires=nrgmon.service
+Requires=nodemon.service
 
 [Timer]
-Unit=nrgmon.service
+Unit=nodemon.service
 OnBootSec=60
 OnUnitActiveSec=10 m
 
@@ -451,7 +469,7 @@ OnUnitActiveSec=10 m
 WantedBy=timers.target
 SYSTEMD_CONF
 
-  cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nrgmon.slice >/dev/null
+  cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nodemon.slice >/dev/null
 [Unit]
 Description=Limited resources Slice
 DefaultDependencies=no
@@ -464,9 +482,9 @@ SYSTEMD_CONF
 
   echo "Reload systemclt Service"
   sudo systemctl daemon-reload
-  echo "Enable nrgmon Service"
-  sudo systemctl enable nrgmon.timer --now
-  sudo systemctl start nrgmon.timer
+  echo "Enable nodemon Service"
+  sudo systemctl enable nodemon.timer --now
+  sudo systemctl start nodemon.timer
 }
 
  # Send the data to discord via webhook.
@@ -750,7 +768,7 @@ ${MESSAGE}"
   TELEGRAM_MSG=$( curl -s -X POST "${URL}" -d "chat_id=${CHAT_ID}&parse_mode=html" -d "${_PAYLOAD}" | sed '/^[[:space:]]*$/d' )
   IS_OK=$( echo "${TELEGRAM_MSG}" | jq '.ok' )
 
-  if [[ "${IS_OK}" != 'true' ]]
+  if [[ "${IS_OK}" != true ]]
   then
     echo "Telegram Error"
     echo "${TELEGRAM_MSG}" | jq '.'
@@ -784,11 +802,11 @@ ${MESSAGE}"
   if [[ -z "${CHAT_ID}" ]] || [[ "${CHAT_ID}" == 'null' ]]
   then
     IS_OK='false'
-    while [[ "${IS_OK}" == 'true' ]]
+    while [[ "${IS_OK}" == true ]]
     do
       GET_UPDATES=$( curl -s "https://api.telegram.org/bot${TOKEN}/getUpdates" )
       IS_OK=$( echo "${GET_UPDATES}" | jq '.ok' )
-      if [[ "${IS_OK}" != 'true' ]]
+      if [[ "${IS_OK}" != true ]]
       then
         echo "Could not get a response from Telegram Bot."
         echo "Login to Telegram and post a message to the bot."
@@ -1804,12 +1822,12 @@ ${RKHUNTER_OUTPUT}"
       mnShortAddress=${SHORTADDR}
 
       isActiveMn=$( ${COMMAND} "masternode.masternodeInfo('$ADDR').isActive" 2>/dev/null | jq '.' )
-      if [[ "${isActiveMn}" == 'true' ]]
+      if [[ "${isActiveMn}" == true ]]
       then
         # Not Alive
         MNINFO=1
         isAliveMn=$( ${COMMAND} "masternode.masternodeInfo('$ADDR').isAlive" 2>/dev/null | jq '.' )
-        if [[ "${isAliveMn}" == 'true' ]]
+        if [[ "${isAliveMn}" == true ]]
         then
           # Masternode Alive and Active
           MNINFO=2
@@ -1862,7 +1880,7 @@ Block Number: ${CHKBLOCK}"
       fi
     
       # If Address is an MN
-      if [[ "${isAliveMn}" == 'true' ]] && [[ -z ${ENDMNBLK} ]]
+      if [[ "${isAliveMn}" == true ]] && [[ -z ${ENDMNBLK} ]]
       then
         
         MNCHKDONE=$( SQL_QUERY "SELECT mnBlocksReceived FROM mn_blocks WHERE mnAddress = '${ADDR}';" )
@@ -1972,7 +1990,7 @@ ${_MNREWARDS}"
   if [[ $( echo "${GETBALANCE} > 0" | bc -l ) -gt 0 ]]
   then
     GETSTAKINGSTATUS=$( ${COMMAND} "miner.stakingStatus().staking" 2>/dev/null )
-    if [[ "${GETSTAKINGSTATUS}" == 'true' ]]
+    if [[ "${GETSTAKINGSTATUS}" == true ]]
     then
       STAKING=1
     fi
@@ -2084,7 +2102,20 @@ New Balance: ${GETTOTALBALANCE}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEB
     fi
   fi
 
-  # Get average staking times for masternode and staking rewards.
+# Get average staking times for masternode and staking rewards.
+#k=1.0
+#j=1.5
+#COOLDOWNTIME=3600
+#COINS_STAKED_TOTAL_NETWORK=$( echo ${k} * ${AvgDiffOf60Blocks} )
+
+#
+# MAX(A,B) ==> echo $((B>A ? B : A))
+#
+#SEC_TO_AVG_STAKE_PER_BAL=$( echo ( ${j} * (60 / (${ACCTBALANCE} / ${COINS_STAKED_TOTAL_NETWORK} ))))
+#SEC_TO_AVG_STAKE=$( echo $((COOLDOWNTIME>SEC_TO_AVG_STAKE_PER_BAL ? COOLDOWNTIME : SEC_TO_AVG_STAKE_PER_BAL )) )
+#TIME_TO_STAKE=$( DISPLAYTIME "${SEC_TO_AVG_STAKE}" )
+ 
+  
  #   SECONDS_TO_AVERAGE_STAKE_MASTERNODE_REWARD=0
  #   SECONDS_TO_AVERAGE_STAKE_STAKING_REWARD=0
   COINS_STAKED_TOTAL_NETWORK=$( echo "${NETWORKHASHPS} * ${NET_HASH_FACTOR}" | bc -l )
@@ -2373,15 +2404,14 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
   fi
 
   echo
-  echo -e "\e[4mInteractive Section. Press enter to use defaults.\e[0m"
+  echo "Interactive Section. Press enter to use defaults."
   SERVER_ALIAS=$( SQL_QUERY "SELECT value FROM variables WHERE key = 'server_alias';" )
   if [[ -z "${SERVER_ALIAS}" ]]
   then
     SERVER_ALIAS=$( hostname )
   fi
-  printf "Current alias for this server: \e[3m"
+  printf "Current alias for this server: "
   read -e -i "${SERVER_ALIAS}" -r
-  printf "\e[0m"
   SQL_QUERY "REPLACE INTO variables (key,value) VALUES ('server_alias','${REPLY}');"
 
   echo
@@ -2393,9 +2423,8 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
   else
     SHOW_IP='n'
   fi
-  printf "Display IP in logs (y/n)? \e[3m"
+  printf "Display IP in logs (y/n)? "
   read -e -i "${SHOW_IP}" -r
-  printf "\e[0m"
   REPLY=${REPLY,,} # tolower
   if [[ "${REPLY}" == y ]]
   then
@@ -2450,7 +2479,7 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
   echo
   echo "Installing as a systemd service."
   sleep 1
-  INSTALL_NRGMON_SERVICE
+  INSTALL_NODEMON_SERVICE
   echo "Service Install Done"
   return 1 2>/dev/null || exit 1
 }
