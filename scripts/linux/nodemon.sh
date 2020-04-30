@@ -1787,6 +1787,7 @@ ${RKHUNTER_OUTPUT}"
   GETBALANCE=0
   ACCTBALANCE=0  
   NRGMKTPRICE=''
+  STAKING=0
   MASTERNODE=0
   NETWORKDIFF=0
   
@@ -1847,7 +1848,7 @@ ${RKHUNTER_OUTPUT}"
         fi
       fi
     fi
-    
+ 
     # For every ADDR check every blocks
     while [[ $( echo "$CHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1  ]]
     do     
@@ -1903,7 +1904,7 @@ ${RKHUNTER_OUTPUT}"
         COINS_STAKED_TOTAL_NETWORK=$( echo "${k} * ${NETWORKDIFF}" | bc -l )
         SEC_TO_AVG_STAKE_PER_BAL=$( echo "${COEFF} * 60 * ${COINS_STAKED_TOTAL_NETWORK} / ${ACCTBALANCE} " | bc -l )
         # MAX(A,B) ==> echo $((B>A ? B : A))
-        SEC_TO_AVG_STAKE=$( echo $(( COOLDOWNTIME>SEC_TO_AVG_STAKE_PER_BAL ? COOLDOWNTIME : SEC_TO_AVG_STAKE_PER_BAL )) )
+        SEC_TO_AVG_STAKE=$( echo $(( COOLDOWNTIME > SEC_TO_AVG_STAKE_PER_BAL ? COOLDOWNTIME : SEC_TO_AVG_STAKE_PER_BAL )) )
         TIME_TO_STAKE=$( DISPLAYTIME "${SEC_TO_AVG_STAKE}" )
         
         # Create payload for stake reward
@@ -2039,22 +2040,24 @@ ${_MNREWARDS}"
   
   # Check staking status.
   STAKING=0
+  STAKING_TEXT='Disabled'
   GETSTAKINGSTATUS="false"
-  if [[ $( echo "${ACCTBALANCE} >= 1" | bc -l ) -gt 0 ]]
+  if [[ $( echo "${GETBALANCE} >= 1" | bc -l ) -gt 0 ]]
   then
     GETSTAKINGSTATUS=$( ${COMMAND} "miner.stakingStatus().staking" 2>/dev/null )
     if [[ "${GETSTAKINGSTATUS}" == true ]]
     then
       STAKING=1
+      STAKING_TEXT='Enabled'
     fi
   fi 
   
-  if [[ ! -z "${ACCTBALANCE}" ]] && [[ "$( echo "${ACCTBALANCE} > 0.0" | bc -l )" -gt 0 ]]
+  if [[ ! -z "${GETBALANCE}" ]] && [[ "$( echo "${GETBALANCE} > 0.0" | bc -l )" -gt 0 ]]
   then
-    if [[ "$( echo "${MIN_STAKE} > ${ACCTBALANCE}" | bc -l )" -gt 0 ]]
+    if [[ "$( echo "${MIN_STAKE} > ${GETBALANCE}" | bc -l )" -gt 0 ]]
     then
       PROCESS_NODE_MESSAGES "${DATADIR}" "staking_balance" "2" "__${USRNAME} ${DAEMON_BIN}__
-Balance (${ACCTBALANCE}) is below the minimum staking threshold (${MIN_STAKE}).
+Balance (${GETBALANCE}) is below the minimum staking threshold (${MIN_STAKE}).
 ${ACCTBALANCE} < ${MIN_STAKE} " "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
     else
       PROCESS_NODE_MESSAGES "${DATADIR}" "staking_balance" "5" "__${USRNAME} ${DAEMON_BIN}__
@@ -2208,13 +2211,7 @@ Connections: ${GETCONNECTIONCOUNT}" ":warning: Warning Chain :link: Split :warni
     
   fi
 
-  # Report on daemon info.
-  STAKING_TEXT='Disabled'
-  if [[ "${STAKING}" -eq 1 ]]
-  then
-    STAKING_TEXT='Enabled'
-  fi
-  
+  # Report on daemon info.  
   MASTERNODE_TEXT='Disabled'
   if [[ ${MASTERNODE} -eq 1 ]]
   then
