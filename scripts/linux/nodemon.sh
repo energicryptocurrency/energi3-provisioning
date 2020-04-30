@@ -1790,6 +1790,16 @@ ${RKHUNTER_OUTPUT}"
     ((CHKBLOCK++))
   done
   
+  # Get total network difficulty
+  NDCHKBLOCK=${LASTCHKBLOCK}
+  sudo chmod 666 ${DIFFLOG}
+  while [[ $( echo "$NDCHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1 ]]
+  do
+   ${COMMAND} "nrg.getBlock($NDCHKBLOCK).difficulty" 2>/dev/null >>${DIFFLOG} 
+   ((NDCHKBLOCK++))
+  done
+  sudo chmod 644 ${DIFFLOG}
+  
   # Set parameters
   GETTOTALBALANCE=0
   GETBALANCE=0
@@ -1888,15 +1898,6 @@ ${RKHUNTER_OUTPUT}"
           PERCENTILE=80
           TMPFILE=$(tempfile)
 
-          # Get total network difficulty
-          NDCHKBLOCK=${LASTCHKBLOCK}
-          sudo chmod 666 ${DIFFLOG}
-          while [[ $( echo "$NDCHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1 ]]
-          do
-           ${COMMAND} "nrg.getBlock($NDCHKBLOCK).difficulty" 2>/dev/null >>${DIFFLOG} 
-           ((NDCHKBLOCK++))
-          done
-
           # Keep last 60 difficulty
           tail -60 ${DIFFLOG} >${TMPFILE}
           sudo cp -f ${TMPFILE} ${DIFFLOG}
@@ -1906,7 +1907,6 @@ ${RKHUNTER_OUTPUT}"
           COUNT=$((( TOTAL * PERCENTILE + 99 ) / 100 ))
           NETWORKDIFF=$( head -n ${COUNT} ${TMPFILE} | tail -n 1 )
           
-          sudo chmod 644 ${DIFFLOG}
           rm ${TMPFILE}
         fi
 
