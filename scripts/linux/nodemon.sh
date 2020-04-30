@@ -16,9 +16,10 @@
 #   1.0.3  20200424  ZAlam Updating report post
 #   1.0.4  20200426  ZAlam Sudo, Telegram and other fixes
 #   1.0.5  20200430  ZAlam Clean-up, add stake calc and chain split
+#   1.0.6  20200430  ZAlam Stake Calc bug fix
 #
 # Set script version
-NODEMONVER=1.0.5
+NODEMONVER=1.0.6
 
  : '
 # Run this file
@@ -1888,7 +1889,8 @@ ${RKHUNTER_OUTPUT}"
            ((NDCHKBLOCK++))
           done
 
-          TOTAL=$( sort -n | tee ${TMPFILE} | wc -l )
+          sort -n -o ${TMPFILE} ${TMPFILE}
+          TOTAL=$( cat ${TMPFILE} | wc -l )
           # (n + 99) / 100 with integers is effectively ceil(n/100) with floats
           COUNT=$((( TOTAL * PERCENTILE + 99 ) / 100 ))
           NETWORKDIFF=$( head -n ${COUNT} ${TMPFILE} | tail -n 1 )
@@ -1907,13 +1909,13 @@ ${RKHUNTER_OUTPUT}"
         SEC_TO_AVG_STAKE=$( echo $(( COOLDOWNTIME > SEC_TO_AVG_STAKE_PER_BAL ? COOLDOWNTIME : SEC_TO_AVG_STAKE_PER_BAL )) )
         TIME_TO_STAKE=$( DISPLAYTIME "${SEC_TO_AVG_STAKE}" )
         
+        #Network Diff: ${NETWORKDIFF}
         # Create payload for stake reward
         _PAYLOAD="__Account: ${SHORTADDR}__
 Mkt Price: ${CURRENCY} ${NRGMKTPRICE}
 New Balance: ${ACCTBALANCE} NRG
 Stake Reward: ${REWARDAMT} NRG
 Block Number: ${CHKBLOCK}
-Network Diff: ${NETWORKDIFF}
 Next Stake ETA: ${TIME_TO_STAKE}"
 
         # Post message
