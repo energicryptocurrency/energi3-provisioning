@@ -79,9 +79,10 @@ NODEMONVER=1.0.6
  MNTOTALNRG=0
  USRNAME=$( find /home -name nodekey  2>&1 | grep -v "Permission denied" | awk -F\/ '{print $3}' )
  export PATH=$PATH:/home/${USRNAME}/energi3/bin
+ DIFFLOG="/var/multi-masternode-data/nodebot/nodemon_netdiff.log"
  LOGDIR="/home/${USRNAME}/log"
  LOGFILE="${LOGDIR}/nodemon.log"
- 
+
  if [[ -z "${CURRENCY}" ]]
  then
    CURRENCY=USD
@@ -421,6 +422,12 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
     chown ${USRNAME}:${USRNAME} ${LOGDIR}
     touch ${LOGFILE}
     chown ${USRNAME}:${USRNAME} ${LOGFILE}
+  fi
+  
+  if [[ ! -f ${DIFFLOG} ]]
+  then
+    sudo touch ${DIFFLOG}
+    sudo chmod 644 ${DIFFLOG}
   fi
   
   # Setup log rotate
@@ -1883,17 +1890,23 @@ ${RKHUNTER_OUTPUT}"
 
           # Get total network difficulty
           NDCHKBLOCK=${LASTCHKBLOCK}
+          sudo chmod 666 ${DIFFLOG}
           while [[ $( echo "$NDCHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1 ]]
           do
-           ${COMMAND} "nrg.getBlock($NDCHKBLOCK).difficulty" 2>/dev/null >>${TMPFILE} 
+           ${COMMAND} "nrg.getBlock($NDCHKBLOCK).difficulty" 2>/dev/null >>${DIFFLOG} 
            ((NDCHKBLOCK++))
           done
 
+          # Keep last 60 difficulty
+          tail -60 ${DIFFLOG} >${TMPFILE}
+          sudo cp -f ${TMPFILE} ${DIFFLOG}
           sort -n -o ${TMPFILE} ${TMPFILE}
           TOTAL=$( cat ${TMPFILE} | wc -l )
           # (n + 99) / 100 with integers is effectively ceil(n/100) with floats
           COUNT=$((( TOTAL * PERCENTILE + 99 ) / 100 ))
           NETWORKDIFF=$( head -n ${COUNT} ${TMPFILE} | tail -n 1 )
+          
+          sudo chmod 644 ${DIFFLOG}
           rm ${TMPFILE}
         fi
 
