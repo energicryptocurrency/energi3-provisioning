@@ -17,9 +17,11 @@
 #   1.0.4  20200426  ZAlam Sudo, Telegram and other fixes
 #   1.0.5  20200430  ZAlam Clean-up, add stake calc and chain split
 #   1.0.6  20200430  ZAlam Stake Calc bug fix
+#   1.0.7  20200502  ZAlam Added reset functionality
+#   1.1.0  20200504  ZAlam First Public Release
 #
 # Set script version
-NODEMONVER=1.0.6
+NODEMONVER=1.1.0
 
  : '
 # Run this file
@@ -28,14 +30,6 @@ NODEMONVER=1.0.6
   bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/nodemon.sh)" ; source ~/.bashrc
 ```
 '
-
- ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- ### sudo systemctl stop nodemon.timer --now
- ### sudo systemctl disable nodemon.timer
- ### sudo sqlite3 -batch /var/multi-masternode-data/nodebot/nodemon.db "REPLACE INTO variables values ( 'last_block_checked', '66060' );"
- ### sudo systemctl enable nodemon.timer
- ### sudo systemctl start nodemon.timer --now
- ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
  # Load parameters from external conf file
  if [[ -f /var/multi-masternode-data/nodebot/nodemon.conf ]]
@@ -70,8 +64,6 @@ NODEMONVER=1.0.6
  DISCORD_TITLE_LIMIT=266
  
  # NRG Parameters
- STAKEAMT="2.28"
- MNMINRWD="0.914"
  NRGAPI="https://explorer.energi.network/api"
  GITAPI_URL="https://api.github.com/repos/energicryptocurrency/energi3/releases/latest"
  
@@ -79,7 +71,7 @@ NODEMONVER=1.0.6
  MNTOTALNRG=0
  USRNAME=$( find /home -name nodekey  2>&1 | grep -v "Permission denied" | awk -F\/ '{print $3}' )
  export PATH=$PATH:/home/${USRNAME}/energi3/bin
- DIFFLOG="/var/multi-masternode-data/nodebot/nodemon_netdiff.log"
+ NETDIFFILE="/var/multi-masternode-data/nodebot/netdiff.db"
  LOGDIR="/home/${USRNAME}/log"
  LOGFILE="${LOGDIR}/nodemon.log"
 
@@ -145,17 +137,29 @@ fi
  if [[ "${arg1}" == 'debug' ]]
 then
   DEBUG_OUTPUT=1
-  set -x
 fi
  if [[ "${arg2}" == 'debug' ]]
 then
   DEBUG_OUTPUT=1
-  set -x
 fi
  if [[ "${arg3}" == 'debug' ]]
 then
   DEBUG_OUTPUT=1
-  set -x
+fi
+
+ # reset arg.
+ RESET=n
+ if [[ "${arg1}" == 'reset' ]]
+then
+  RESET=y
+fi
+ if [[ "${arg2}" == 'reset' ]]
+then
+  RESET=y
+fi
+ if [[ "${arg3}" == 'reset' ]]
+then
+  RESET=y
 fi
 
  # test arg.
@@ -333,6 +337,12 @@ fi
  mnTotalReward INTEGER
 );"
 
+ # Network Difficulty table.
+ SQL_QUERY "CREATE TABLE IF NOT EXISTS net_difficulty (
+ blockNum INTEGER PRIMARY KEY,
+ difficulty INTEGER NOT NULL
+);"
+
  # Insert seed data; give poll 5 blocks from current
  CURRENTBLKNUM=$( ${COMMAND} "nrg.blockNumber" 2>/dev/null | jq -r '.' )
  CURRENTBLKNUM=$( echo "${CURRENTBLKNUM} - 5" | bc -l )
@@ -341,7 +351,7 @@ fi
   SQL_QUERY "INSERT OR IGNORE INTO variables values ( 'last_block_checked', '${CURRENTBLKNUM}' );"
  else
   echo "energi3 is not running.  Exiting nodemon."
-  exit 1
+  exit 0
  fi
 
  # Daemon_bin_name URL_to_logo Bot_name
@@ -424,10 +434,10 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
     chown ${USRNAME}:${USRNAME} ${LOGFILE}
   fi
   
-  if [[ ! -f ${DIFFLOG} ]]
+  if [[ ! -f ${NETDIFFILE} ]]
   then
-    sudo touch ${DIFFLOG}
-    sudo chmod 644 ${DIFFLOG}
+    sudo touch ${NETDIFFILE}
+    sudo chmod 644 ${NETDIFFILE}
   fi
   
   # Setup log rotate
@@ -458,7 +468,7 @@ SUDO_CONF
   cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nodemon.service >/dev/null
 [Unit]
 Description=Core Node Monitor
-After=syslog.target network.target
+After=syslog.target network.target energi3.service
 
 [Service]
 SyslogIdentifier=cftimer-energi3-node-monitor
@@ -497,11 +507,38 @@ CPUQuota=50%
 MemoryLimit=1.0G
 SYSTEMD_CONF
 
-  echo "Reload systemclt Service"
+  echo "Reload systemctl Service"
   sudo systemctl daemon-reload
   echo "Enable nodemon Service"
   sudo systemctl enable nodemon.timer --now
   sudo systemctl start nodemon.timer
+}
+
+RESET_NODEMON () {
+
+  echo
+  echo "This will remove the database and the exiting nodemon script"
+  echo
+  REPLY=''
+  read -p "Do you want to completely remove nodemon? y/[n]: "
+  REPLY=${REPLY,,} # tolower
+  if [[ "${REPLY}" == "n" ]] || [[ -z "${REPLY}" ]]
+  then
+    echo
+    echo "Exiting script without removing nodemon..."
+    echo
+    exit 0
+  fi
+  echo
+  echo "Removing nodemon database"
+  sudo rm -rf /var/multi-masternode-data/nodebot
+  
+  echo "Removing systemctl services"
+  sudo systemctl stop nodemon.timer --now
+  sudo systemctl disable nodemon.timer
+  sudo rm /etc/systemd/system/nodemon.*
+  
+  exit 0
 }
 
  # Send the data to discord via webhook.
@@ -1036,7 +1073,7 @@ ${MESSAGE}"
   fi
 }
 
-SEND_EMAIL () {
+ SEND_EMAIL () {
 
   # Temp Files
   TOMAILFILE=/tmp/reward_email.txt
@@ -1066,7 +1103,7 @@ SEND_EMAIL () {
   rm $TOMAILFILE
 }
 
-SEND_SMS () {
+ SEND_SMS () {
 
     # Temp Files
     TOSMSFILE=/tmp/reward_sms.txt
@@ -1250,7 +1287,7 @@ SEND_SMS () {
   # Send recovery message.
   elif [[ "${MESSAGE_TYPE}" -eq 5 ]] && [[ ! -z "${MESSAGE_PAST}" ]]
   then
-    ERRORS=$( SEND_SUCCESS "${MESSAGE_TEXT}" ":wrench: ${MESSAGE_TEXT} :wrench:" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}" )
+    ERRORS=$( SEND_SUCCESS "${MESSAGE_TEXT}" ":wrench: ${MESSAGE_TITLE} :wrench:" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}" )
     if [[ -z "${ERRORS}" ]]
     then
       SQL_QUERY "DELETE FROM node_log WHERE conf_loc == '${DATADIR}' AND type == '${TYPE}'; "
@@ -1792,13 +1829,15 @@ ${RKHUNTER_OUTPUT}"
   
   # Get total network difficulty
   NDCHKBLOCK=${LASTCHKBLOCK}
-  sudo chmod 666 ${DIFFLOG}
+  sudo chmod 666 ${NETDIFFILE}
   while [[ $( echo "$NDCHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1 ]]
   do
-   ${COMMAND} "nrg.getBlock($NDCHKBLOCK).difficulty" 2>/dev/null >>${DIFFLOG} 
+   DIFFICULTY=$( ${COMMAND} "nrg.getBlock($NDCHKBLOCK).difficulty" 2>/dev/null )
+   echo "${NDCHKBLOCK} ${DIFFICULTY}" >>${NETDIFFILE}
+   SQL_QUERY "INSERT INTO net_difficulty (blockNum, difficulty) VALUES ('${NDCHKBLOCK}', '${DIFFICULTY}');"
    ((NDCHKBLOCK++))
   done
-  sudo chmod 644 ${DIFFLOG}
+  sudo chmod 644 ${NETDIFFILE}
   
   # Set parameters
   GETTOTALBALANCE=0
@@ -1895,32 +1934,59 @@ ${RKHUNTER_OUTPUT}"
         if [[ ${NETWORKDIFF} -eq 0 ]]
         then
           
-          PERCENTILE=80
-          TMPFILE=$(tempfile)
+          PERCENTILE=90
+          COUNT=0
+          TOTAL=0
+          TMPFILE1=$(tempfile)
+          TMPFILE2=$(tempfile)
 
-          # Keep last 60 difficulty
-          tail -60 ${DIFFLOG} >${TMPFILE}
-          sudo cp -f ${TMPFILE} ${DIFFLOG}
-          sort -n -o ${TMPFILE} ${TMPFILE}
-          TOTAL=$( cat ${TMPFILE} | wc -l )
-          # (n + 99) / 100 with integers is effectively ceil(n/100) with floats
-          COUNT=$((( TOTAL * PERCENTILE + 99 ) / 100 ))
-          NETWORKDIFF=$( head -n ${COUNT} ${TMPFILE} | tail -n 1 )
-          
-          rm ${TMPFILE}
+          # Keep last 120 difficulty
+          tail -120 ${NETDIFFILE} >${TMPFILE1}
+          sudo cp -f ${TMPFILE1} ${NETDIFFILE}
+          sort -n -o ${TMPFILE1} ${TMPFILE1}
+                  
+          # remove first and last 10 lines
+          tail -n +11 ${TMPFILE1} | head -n -10 > ${TMPFILE2}
+
+          for i in $( awk '{ print $2; }' ${TMPFILE2} )
+             do
+               TOTAL=$(echo $TOTAL+$i | bc )
+               ((COUNT++))
+             done
+          NETWORKDIFF=$( echo "scale=2; $TOTAL / $COUNT" | bc -l )
+
+          sudo rm ${TMPFILE1}
+          sudo rm ${TMPFILE2}
         fi
 
         # Coeeficient factor
         k=1
-        COEFF=1.5
+        #COEFF=1.5
+        COEFF=0.1
+        BLOCKTIME_SECONDS=60
         COOLDOWNTIME=3600
 
         # Get average staking times for masternode and staking rewards.
         COINS_STAKED_TOTAL_NETWORK=$( echo "${k} * ${NETWORKDIFF}" | bc -l )
-        SEC_TO_AVG_STAKE_PER_BAL=$( echo "${COEFF} * 60 * ${COINS_STAKED_TOTAL_NETWORK} / ${ACCTBALANCE} " | bc -l )
-        # MAX(A,B) ==> echo $((B>A ? B : A))
-        SEC_TO_AVG_STAKE=$( echo $(( COOLDOWNTIME > SEC_TO_AVG_STAKE_PER_BAL ? COOLDOWNTIME : SEC_TO_AVG_STAKE_PER_BAL )) )
+        SEC_TO_AVG_STAKE_PER_BAL=$( echo "${COINS_STAKED_TOTAL_NETWORK} / ${ACCTBALANCE} * ${BLOCKTIME_SECONDS} * ${COEFF}" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//' )
+        
+        # Max of COOLDOWNTIME and SEC_TO_AVG_STAKE_PER_BAL
+        if [[ $( echo "${COOLDOWNTIME} > ${SEC_TO_AVG_STAKE_PER_BAL}" | bc -l ) -gt 1 ]]
+        then
+          SEC_TO_AVG_STAKE=${COOLDOWNTIME}
+        else
+          SEC_TO_AVG_STAKE=${SEC_TO_AVG_STAKE_PER_BAL}
+        fi
         TIME_TO_STAKE=$( DISPLAYTIME "${SEC_TO_AVG_STAKE}" )
+        
+        # Debug Output
+        if [[ "${DEBUG_OUTPUT}" -eq 1 ]]
+        then
+          echo "Staking Balance: ${ACCTBALANCE}"
+          echo "Avg Difficulty: ${NETWORKDIFF}"
+          echo "Next Stake ETA: ${TIME_TO_STAKE}"
+          echo
+        fi
         
         #Network Diff: ${NETWORKDIFF}
         # Create payload for stake reward
@@ -2080,12 +2146,12 @@ Has enough coins to stake now!" "Balance is above the minimum" "${DISCORD_WEBHOO
       if [[ "${STAKING}" -eq 0 ]]
       then
         PROCESS_NODE_MESSAGES "${DATADIR}" "staking_status" "2" "__${USRNAME} ${DAEMON_BIN}__
-Staking status is DISABLED" "Staking is disabled" "" "" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+Staking status is DISABLED" "Staking is DISABLED" "" "" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
       fi
       if [[ "${STAKING}" -eq 1 ]]
       then
         PROCESS_NODE_MESSAGES "${DATADIR}" "staking_status" "5" "__${USRNAME} ${DAEMON_BIN}__
-Staking status is now ENABLED!" "Staking is enabled" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+Staking status is now ENABLED!" "Staking is ENABLED" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
       fi
     fi
   fi
@@ -2213,16 +2279,30 @@ New Balance: ${GETTOTALBALANCE}" "" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEB
     FIRSTNODEAPIHASH=$( echo ${NODEAPIHASH:2:8} )
     LASTNODEAPIHASH=$( echo ${NODEAPIHASH:${#NODEAPIHASH} - 8} )
   
-    SEND_WARNING "__${USRNAME} ${DAEMON_BIN}__
+    _PAYLOAD="__${USRNAME} ${DAEMON_BIN}__
 Chain Split detected.
 ${NODEINSYNC}
 Block Height Checked: ${CURRENTBLKNUM}
 Local Hash: ${FIRSTNODEHASH}...${LASTNODEHASH}
 NodeAPI Hash: ${FIRSTNODEAPIHASH}...${LASTNODEAPIHASH}
-BlockCount: ${GETBLOCKCOUNT}
-Connections: ${GETCONNECTIONCOUNT}" ":warning: Warning Chain :link: Split :warning:" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+Block Height: ${GETBLOCKCOUNT}
+Connections: ${GETCONNECTIONCOUNT}"
 
-    SQL_QUERY "REPLACE INTO variables (key,value) VALUES ('${DATADIR}:chain_split','${CURRENTBLKNUM}');"
+    PROCESS_NODE_MESSAGES "${DATADIR}" "chain_split" "2" "${_PAYLOAD}" ":warning: Warning Chain :link: Split :warning:" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
+ 
+  elif [[ ${NODEHASH} == ${NODEAPIHASH} ]]
+  then
+  
+    _PAYLOAD="__${USRNAME} ${DAEMON_BIN}__
+Chain back to normal.
+${NODEINSYNC}
+Block Height Checked: ${CURRENTBLKNUM}
+Local Hash: ${FIRSTNODEHASH}...${LASTNODEHASH}
+NodeAPI Hash: ${FIRSTNODEAPIHASH}...${LASTNODEAPIHASH}
+Block Height: ${GETBLOCKCOUNT}
+Connections: ${GETCONNECTIONCOUNT}"
+  
+    PROCESS_NODE_MESSAGES "${DATADIR}" "chain_split" "5" "${_PAYLOAD}" "Chain :link: is normal" "${DISCORD_WEBHOOK_USERNAME}" "${DISCORD_WEBHOOK_AVATAR}"
     
   fi
 
@@ -2257,7 +2337,7 @@ Running most recent version: ${VERSION}" "Node version current" "${DISCORD_WEBHO
   fi
 
   _PAYLOAD="__${USRNAME} ${DAEMON_BIN}__
-BlockCount: ${GETBLOCKCOUNT}
+Block Height: ${GETBLOCKCOUNT}
 Connections: ${GETCONNECTIONCOUNT}
 Staking Status: ${STAKING_TEXT}
 Masternode Status: ${MASTERNODE_TEXT}
@@ -2408,9 +2488,8 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
     echo "+++++++++++++++++++++++++++++"
     echo "Username: ${USRNAME}"
     echo "MN Username: ${MN_USRNAME}"
-    echo "Cli: ${CONTROLLER_BIN} ${CONTROLLER_BIN_LOC}"
     echo "Daemon: ${DAEMON_BIN} ${DAEMON_BIN_LOC}"
-    echo "Conf Location: ${CONF_LOCATION}"
+    echo "Conf Location: ${DATADIR}"
     echo "PID: ${DAEMON_PID}"
     echo "Uptime: ${UPTIME}"
     echo
@@ -2506,7 +2585,13 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
   return 1 2>/dev/null || exit 1
 }
 
- # Main
+  # Main
+  if [[ "${RESET}" == 'y' ]]
+  then
+    RESET_NODEMON
+    
+  fi
+ 
   if [[ "${arg1}" == 'node_run' ]]
   then
     GET_NODE_INFO "${arg2}" "${arg3}"
