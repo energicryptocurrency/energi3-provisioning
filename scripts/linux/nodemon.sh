@@ -1943,9 +1943,9 @@ ${RKHUNTER_OUTPUT}"
         # Max of COOLDOWNTIME and SEC_TO_AVG_STAKE_PER_BAL
         if [[ $( echo "${COOLDOWNTIME} > ${SEC_TO_AVG_STAKE_PER_BAL}" | bc -l ) -gt 1 ]]
         then
-          SEC_TO_AVG_STAKE=${COOLDOWNTIME}
-        else
           SEC_TO_AVG_STAKE=${SEC_TO_AVG_STAKE_PER_BAL}
+        else
+          SEC_TO_AVG_STAKE=${COOLDOWNTIME}
         fi
         TIME_TO_STAKE=$( DISPLAYTIME "${SEC_TO_AVG_STAKE}" )
         
