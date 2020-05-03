@@ -1941,11 +1941,11 @@ ${RKHUNTER_OUTPUT}"
         SEC_TO_AVG_STAKE_PER_BAL=$( echo "${COINS_STAKED_TOTAL_NETWORK} / ${ACCTBALANCE} * ${BLOCKTIME_SECONDS} * ${COEFF}" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//' )
         
         # Max of COOLDOWNTIME and SEC_TO_AVG_STAKE_PER_BAL
-        if [[ $( echo "${COOLDOWNTIME} > ${SEC_TO_AVG_STAKE_PER_BAL}" | bc -l ) -gt 1 ]]
+        if [[ $( echo "${COOLDOWNTIME} > ${SEC_TO_AVG_STAKE_PER_BAL}" | bc -l ) -gt 0 ]]
         then
-          SEC_TO_AVG_STAKE=${SEC_TO_AVG_STAKE_PER_BAL}
-        else
           SEC_TO_AVG_STAKE=${COOLDOWNTIME}
+        else
+          SEC_TO_AVG_STAKE=${SEC_TO_AVG_STAKE_PER_BAL}
         fi
         TIME_TO_STAKE=$( DISPLAYTIME "${SEC_TO_AVG_STAKE}" )
         
