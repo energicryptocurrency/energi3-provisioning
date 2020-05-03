@@ -71,7 +71,6 @@ NODEMONVER=1.1.0
  MNTOTALNRG=0
  USRNAME=$( find /home -name nodekey  2>&1 | grep -v "Permission denied" | awk -F\/ '{print $3}' )
  export PATH=$PATH:/home/${USRNAME}/energi3/bin
- NETDIFFILE="/var/multi-masternode-data/nodebot/netdiff.db"
  LOGDIR="/home/${USRNAME}/log"
  LOGFILE="${LOGDIR}/nodemon.log"
 
@@ -433,13 +432,7 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
     touch ${LOGFILE}
     chown ${USRNAME}:${USRNAME} ${LOGFILE}
   fi
-  
-  if [[ ! -f ${NETDIFFILE} ]]
-  then
-    sudo touch ${NETDIFFILE}
-    sudo chmod 644 ${NETDIFFILE}
-  fi
-  
+
   # Setup log rotate
   # Logs in $HOME/log will rotate automatically when it reaches 50M
   if [ ! -f /etc/logrotate.d/nodemon ]
@@ -1829,15 +1822,14 @@ ${RKHUNTER_OUTPUT}"
   
   # Get total network difficulty
   NDCHKBLOCK=${LASTCHKBLOCK}
-  sudo chmod 666 ${NETDIFFILE}
   while [[ $( echo "$NDCHKBLOCK < $CURRENTBLKNUM" | bc -l ) -eq 1 ]]
   do
    DIFFICULTY=$( ${COMMAND} "nrg.getBlock($NDCHKBLOCK).difficulty" 2>/dev/null )
-   echo "${NDCHKBLOCK} ${DIFFICULTY}" >>${NETDIFFILE}
    SQL_QUERY "INSERT INTO net_difficulty (blockNum, difficulty) VALUES ('${NDCHKBLOCK}', '${DIFFICULTY}');"
    ((NDCHKBLOCK++))
   done
-  sudo chmod 644 ${NETDIFFILE}
+  # Keep last 120 rows
+  SQL_QUERY "DELETE FROM net_difficulty WHERE blockNum NOT IN (SELECT blockNum FROM net_difficulty ORDER BY blockNum DESC LIMIT 120 );"
   
   # Set parameters
   GETTOTALBALANCE=0
@@ -1933,30 +1925,8 @@ ${RKHUNTER_OUTPUT}"
         
         if [[ ${NETWORKDIFF} -eq 0 ]]
         then
-          
-          PERCENTILE=90
-          COUNT=0
-          TOTAL=0
-          TMPFILE1=$(tempfile)
-          TMPFILE2=$(tempfile)
+          NETWORKDIFF=$( SQL_QUERY "SELECT AVG(difficulty) FROM net_difficulty;" )
 
-          # Keep last 120 difficulty
-          tail -120 ${NETDIFFILE} >${TMPFILE1}
-          sudo cp -f ${TMPFILE1} ${NETDIFFILE}
-          sort -n -o ${TMPFILE1} ${TMPFILE1}
-                  
-          # remove first and last 10 lines
-          tail -n +11 ${TMPFILE1} | head -n -10 > ${TMPFILE2}
-
-          for i in $( awk '{ print $2; }' ${TMPFILE2} )
-             do
-               TOTAL=$(echo $TOTAL+$i | bc )
-               ((COUNT++))
-             done
-          NETWORKDIFF=$( echo "scale=2; $TOTAL / $COUNT" | bc -l )
-
-          sudo rm ${TMPFILE1}
-          sudo rm ${TMPFILE2}
         fi
 
         # Coeeficient factor
