@@ -147,6 +147,7 @@ rm ${RPTTMPFILE}
 # Add title
 sed -i '1irewardTime,blockNum,type,mnAddress,balance,reward,nrgPrice' ${RPTFILE}
 
+# Print location of file
 echo
 echo "The report has been saved to:"
 echo "   ${RPTFILE}"
