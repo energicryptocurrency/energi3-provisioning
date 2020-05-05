@@ -19,9 +19,10 @@
 #   1.0.6  20200430  ZAlam Stake Calc bug fix
 #   1.0.7  20200502  ZAlam Added reset functionality
 #   1.1.0  20200504  ZAlam First Public Release
+#   1.1.1  20200505  ZAlam Update email content
 #
 # Set script version
-NODEMONVER=1.1.0
+NODEMONVER=1.1.1
 
  : '
 # Run this file
@@ -1076,16 +1077,21 @@ ${MESSAGE}"
   echo "From: ${SENDTOEMAIL}" >> $TOMAILFILE
   echo "Subject: NRG-${SHORTADDR} - ${1} " >> $TOMAILFILE
   echo ""  >> $TOMAILFILE
-  echo "Current Balance: ${ACCTBALANCE} NRG" >> $TOMAILFILE
+
+  echo "Market Price:    ${CURRENCY} ${NRGMKTPRICE}" >> $TOMAILFILE
   if [[ ${STAKERWD} == Y ]] 
   then
-    echo "Reward Amount:   ${REWARDAMT} NRG" >> $TOMAILFILE
+    echo "New Balance: ${ACCTBALANCE} NRG" >> $TOMAILFILE
+    echo "Stake Reward:   ${REWARDAMT} NRG" >> $TOMAILFILE
+    echo "Block Number: ${CHKBLOCK}" >> $TOMAILFILE
+    echo "Next Stake ETA: ${TIME_TO_STAKE}" >> $TOMAILFILE
   elif [[ ${MNRWD} == Y  ]]
   then
-    echo "Reward Amount:   ${MNTOTALNRG} NRG" >> $TOMAILFILE
+    echo "Masternode Collateral: ${MNCOLLATERAL} NRG"  >> $TOMAILFILE
+    echo "Masternode reward:   ${MNTOTALNRG} NRG" >> $TOMAILFILE
+    echo "${_MNREWARDS}" >> $TOMAILFILE
   fi
-  echo "Market Price:    ${NRGMKTPRICE}" >> $TOMAILFILE
-
+  
   echo "" >> $TOMAILFILE
   
   # Send email
