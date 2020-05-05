@@ -16,7 +16,7 @@
 #   1.0.0  20200421  ZAlam Initial Script
 #
 # Set script version
-NRGRPTVER=1.0.0
+NODERPTVER=1.0.0
 
 #set -x
 
@@ -32,7 +32,7 @@ RPTFILE="/home/${USRNAME}/etc/reward_data.csv"
 
 # Report function
 SQL_REPORT () {
-sqlite3 -noheader -csv /var/multi-masternode-data/nrgbot/nrgmon.db "${1}"
+sqlite3 -noheader -csv /var/multi-masternode-data/nodebot/nodemon.db "${1}"
 }
 
 # Set colors
@@ -46,25 +46,27 @@ _instructions () {
   echo "${GREEN}"
   clear 2> /dev/null
   cat << "ENERGI3"
-      ___      
-     /\  \     .  . ,-.   ,-. .   ,  ,-.  .  .   ,-.  ,--. ;-.   ,-.  ,-.  ,---.
-    /::\  \    |\ | |  ) /    |\ /| /   \ |\ |   |  ) |    |  ) /   \ |  )   |`
-   /:/\:\__\   | \| |-<  | -. | V | |   | | \|   |-<  |-   |-'  |   | |-<    |
-  /:/ /:/ _/_  |  | |  \ \  | |   | \   / |  |   |  \ |    |    \   / |  \   |
- /:/ /:/ /\__\ '  ' '  '  `-' '   '  `-'  '  '   '  ' `--' '     `-'  '  '   '
- \:\ \/ /:/  /
+      ___       _  _         _     __  __
+     /\  \     | \| |___  __| |___|  \/  |___ _ _
+    /::\  \    | .` / _ \/ _` / -_) |\/| / _ \ ' \
+   /:/\:\__\   |_|\_\___/\__,_\___|_|  |_\___/_||_|
+  /:/ /:/ _/_    | _ \___ _ __  ___ _ _| |_
+ /:/ /:/ /\__\   |   / -_) '_ \/ _ \ '_|  _|
+ \:\ \/ /:/  /   |_|_\___| .__/\___/_|  \__|
+  \:\  /:/  /            |_|
 ENERGI3
-echo "${GREEN}  \:\  /:/  /  ${NC}Options:"
-echo "${GREEN}   \:\/:/  /   ${NC}a - Extract all data"
-echo "${GREEN}    \::/  /    ${NC}b - Generate current month data (not working)"
-echo "${GREEN}     \/__/     ${NC}c - Custom dates (not working)"
+echo "${GREEN}   \:\/:/  /   ${NC}Options:"
+echo "${GREEN}    \::/  /    ${NC}a - Extract all data"
+echo "${GREEN}     \/__/     ${NC}b - Generate last month data"
+echo "               ${NC}c - Generate current month data"
+echo "               ${NC}d - Custom dates"
 echo ${NC}
 }
 
 _instructions
 
 REPLY='a'
-read -p "Please select an option(a, b or c): " -r
+read -p "Please select an option([a], b, c or d): " -r
 REPLY=${REPLY,,} # tolower
 if [ "${REPLY}" = "" ]
 then
@@ -87,13 +89,27 @@ case ${REPLY} in
     ;;
 
   b)
-    #SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,mnAddress,balance,Reward,nrgPrice FROM mn_rewards WHERE strftime('%m', rewardTime, unixepoch) = '04';"
-    #SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,stakeAddress,balance,Reward,nrgPrice FROM stake_rewards strftime('%m', rewardTime, unixepoch) = '04';"
-    echo ${REPLY}
+  
+    CURRMON=$( date +%Y-%m )
+    PREVMON=$( date -d "$CURRMON-15 last month" '+%Y-%m' )
+    PREVMON2=$( date -d "$CURRMON-15 last month" '+%m %Y' )
+    LASTDAY=$( cal ${PREVMON2} | awk 'NF {DAYS = $NF}; END {print DAYS}' )
+    
+    SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'M',mnAddress,balance,Reward,nrgPrice FROM mn_rewards WHERE rewardTime >= strftime('%s','${CURRMON}-01 00:00:00') and rewardTime <= strftime('%s','${CURRMON}-${LASTDAY} 23:59:59');" > ${RPTTMPFILE}
+    
+    SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'S',stakeAddress,balance,Reward,nrgPrice FROM stake_rewards WHERE rewardTime >= strftime('%s','${CURRMON}-01 00:00:00') and rewardTime <= strftime('%s','${CURRMON}-${LASTDAY} 23:59:59');" >> ${RPTTMPFILE}
+
     ;;
 
   c)
-    echo ${REPLY}
+    
+    read -p "Enter start date [YYYY-MM-DD]: " STARTDATE
+    read -p "Enter end date [YYYY-MM-DD]: " ENDDATE
+    
+    SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'M',mnAddress,balance,Reward,nrgPrice FROM mn_rewards WHERE rewardTime >= strftime('%s','${STARTDATE} 00:00:00') and rewardTime <= strftime('%s','${ENDDATE} 23:59:59');" > ${RPTTMPFILE}
+    
+    SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'S',stakeAddress,balance,Reward,nrgPrice FROM stake_rewards WHERE rewardTime >= strftime('%s','${STARTDATE} 00:00:00') and rewardTime <= strftime('%s','${ENDDATE} 23:59:59');" >> ${RPTTMPFILE}
+    
     ;;
 
   *)
@@ -111,4 +127,9 @@ rm ${RPTTMPFILE}
 # Add title
 sed -i '1irewardTime,blockNum,type,mnAddress,balance,reward,nrgPrice' ${RPTFILE}
 
-#cat ${RPTFILE}
+echo
+echo "The report has been saved to:"
+echo "   ${RPTFILE}"
+echo
+
+
