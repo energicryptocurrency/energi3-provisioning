@@ -95,16 +95,28 @@ case ${REPLY} in
     PREVMON2=$( date -d "$CURRMON-15 last month" '+%m %Y' )
     LASTDAY=$( cal ${PREVMON2} | awk 'NF {DAYS = $NF}; END {print DAYS}' )
     
+    SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'M',mnAddress,balance,Reward,nrgPrice FROM mn_rewards WHERE rewardTime >= strftime('%s','${PREVMON}-01 00:00:00') and rewardTime <= strftime('%s','${PREVMON}-${LASTDAY} 23:59:59');" > ${RPTTMPFILE}
+    
+    SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'S',stakeAddress,balance,Reward,nrgPrice FROM stake_rewards WHERE rewardTime >= strftime('%s','${PREVMON}-01 00:00:00') and rewardTime <= strftime('%s','${PREVMON}-${LASTDAY} 23:59:59');" >> ${RPTTMPFILE}
+
+    ;;
+
+  c)
+  
+    CURRMON=$( date +%Y-%m )
+    LASTDAY=$( cal ${CURRMON} | awk 'NF {DAYS = $NF}; END {print DAYS}' )
+    
     SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'M',mnAddress,balance,Reward,nrgPrice FROM mn_rewards WHERE rewardTime >= strftime('%s','${CURRMON}-01 00:00:00') and rewardTime <= strftime('%s','${CURRMON}-${LASTDAY} 23:59:59');" > ${RPTTMPFILE}
     
     SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'S',stakeAddress,balance,Reward,nrgPrice FROM stake_rewards WHERE rewardTime >= strftime('%s','${CURRMON}-01 00:00:00') and rewardTime <= strftime('%s','${CURRMON}-${LASTDAY} 23:59:59');" >> ${RPTTMPFILE}
 
     ;;
 
-  c)
+  d)
     
-    read -p "Enter start date [YYYY-MM-DD]: " STARTDATE
-    read -p "Enter end date [YYYY-MM-DD]: " ENDDATE
+    echo "Enter date range of report..."
+    read -p "Start date [YYYY-MM-DD]: " STARTDATE
+    read -p "End date [YYYY-MM-DD]  : " ENDDATE
     
     SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'M',mnAddress,balance,Reward,nrgPrice FROM mn_rewards WHERE rewardTime >= strftime('%s','${STARTDATE} 00:00:00') and rewardTime <= strftime('%s','${ENDDATE} 23:59:59');" > ${RPTTMPFILE}
     
@@ -113,7 +125,15 @@ case ${REPLY} in
     ;;
 
   *)
-    echo "help"
+  
+    echo
+    echo "Enter Options:"
+    echo " a - Extract all data"
+    echo " b - Generate last month data"
+    echo " c - Generate current month data"
+    echo " d - Custom dates"
+    echo
+    exit 0
     ;;
 
 esac
