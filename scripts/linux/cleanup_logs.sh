@@ -13,7 +13,7 @@
 : '
 # Run the script to get started:
 ```
-curl raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/cleanup_logs.sh | bash
+curl -s https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/cleanup_logs.sh | bash
 ```
 '
 ######################################################################
