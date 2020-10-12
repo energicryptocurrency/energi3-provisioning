@@ -9,7 +9,7 @@
 # 
 # Version:
 #   0.0.1  20200929 DT Initial Script
-#   1.0.1  20201012 ZA Added echo to provide information of what is being cleaned
+#   1.0.0  20201012 ZA Added echo to provide information of what is being cleaned
 : '
 # Run the script to get started:
 ```
