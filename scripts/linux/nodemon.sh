@@ -718,7 +718,7 @@ PAYLOAD
   echo -n ' -> text channels, general, click gear to "edit channel" -> Left side SELECT Webhooks'
   echo -n ' -> Create Webhook -> Copy webhook url -> save'
   echo
-  echo "This webhook will be used for ${TEXT_A} Messages."
+  echo "This webhook will be used for error messages."
   echo 'You can reuse the same webhook url if you want all alerts and information'
   echo 'pings in the same channel.'
 
