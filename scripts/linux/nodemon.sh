@@ -98,7 +98,7 @@ NODEMONVER=1.1.1
       SUDO='sudo'
     else
       echo "User ${USRNAME} does not have sudo permissions."
-      echo "Run ${BLUE}sudo ls -l${NC} to set permissions if you know the user ${USRNAME} has sudo previlidges"
+      echo "Run ${BLUE}sudo ls -l${NC} to set permissions if you know the user ${USRNAME} has sudo privileges"
       echo "and then rerun the script"
       echo "Exiting script..."
       sleep 3

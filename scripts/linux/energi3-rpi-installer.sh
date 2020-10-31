@@ -129,7 +129,7 @@ _check_runas () {
 
   # Who is running the script
   # If root no sudo required
-  # If user has sudo privilidges, run sudo when necessary
+  # If user has sudo privileges, run sudo when necessary
 
   RUNAS=`whoami`
   
@@ -143,7 +143,7 @@ _check_runas () {
       SUDO='sudo'
     else
       echo "User ${RUNAS} does not have sudo permissions."
-      echo "Run ${BLUE}sudo ls -l${NC} to set permissions if you know the user ${RUNAS} has sudo previlidges"
+      echo "Run ${BLUE}sudo ls -l${NC} to set permissions if you know the user ${RUNAS} has sudo privileges"
       echo "and then rerun the script"
       echo "Exiting script..."
       sleep 3
@@ -241,7 +241,7 @@ _add_nrgstaker () {
 
 _check_install () {
 
-  # Check if run as root or user has sudo privilidges
+  # Check if run as root or user has sudo privileges
   
   _check_runas
   
