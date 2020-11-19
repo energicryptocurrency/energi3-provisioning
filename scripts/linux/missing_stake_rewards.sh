@@ -1,23 +1,5 @@
 #!/bin/bash
 
-#######################################################################
-# Copyright (c) 2020
-# All rights reserved.
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
-#
-# Desc:    Script to load missing stake reward data
-#
-# Version:
-#   1.0.0  20201014  ZAlam Initial Script
-#
-: '
-# Run the script to get started:
-```
-bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/missing_stake_rewards.sh; source ~/.bashrc
-```
-'
-#######################################################################
-
 #set -x
 
 # Load parameters from external conf file
@@ -84,6 +66,7 @@ do
 
     cat list_blk_mined.txt | jq -r '.result[] .blockNumber' | sort -u -n > blk_mined.txt
 
+#    ACCTBALANCE=$( $COMMAND "web3.fromWei(nrg.getBalance('$ADDR'), 'energi')" 2>/dev/null )
     ACCTBALANCE=''
     NRGMKTPRICE=''
 
@@ -98,7 +81,7 @@ do
         then
 
             REWARDTIME=$( ${COMMAND} "nrg.getBlock($CHKBLOCK).timestamp" 2>/dev/null )
-	          BLKMINER=$( ${COMMAND} "nrg.getBlock($CHKBLOCK).miner" 2>/dev/null | jq -r '.[]' )
+	    BLKMINER=$( ${COMMAND} "nrg.getBlock($CHKBLOCK).miner" 2>/dev/null | jq -r '.' | tr '[:upper:]' '[:lower:]' )
 
 	    if [ "${ADDR}" = "${BLKMINER}" ]
 	    then
@@ -108,7 +91,7 @@ do
 	        if [[ ! $NRGMKTPRICE =~ ^[+-]?[0-9]+\.?[0-9]*$ ]]
 	        then
                     NRGMKTPRICE=''
-          fi
+                fi
 
                 SQL_QUERY "INSERT INTO stake_rewards (stakeAddress, rewardTime, blockNum, Reward, balance, nrgPrice)
                   VALUES ('${ADDR}','${REWARDTIME}','${CHKBLOCK}','${REWARDAMT}', '${ACCTBALANCE}', '${NRGMKTPRICE}');"
