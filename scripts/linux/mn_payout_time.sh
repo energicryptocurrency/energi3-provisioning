@@ -28,6 +28,8 @@ DISPLAYTIME () {
 
 COMMAND="energi3 attach --exec "
 
+#clear screen
+clear
 
 # Set an address if you want
 #MNADDR=
@@ -51,6 +53,7 @@ do
     else
 
         # Get masternode list
+        echo -e "Scanning List of Masternodes for Address: ${MNADDR}\nThis will take a moment."
         ${COMMAND} "masternode.listMasternodes()" 2>/dev/null > mnList.json
 
 	# convert to lower case
