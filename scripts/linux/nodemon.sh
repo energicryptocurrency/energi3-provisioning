@@ -330,8 +330,8 @@ fi
 );"
 
  SQL_QUERY "CREATE TABLE IF NOT EXISTS mn_blocks (
- mnAddress TEXT PRIMARY KEY, 
- mnBlocksReceived TEXT, 
+ mnAddress TEXT PRIMARY KEY,
+ mnBlocksReceived TEXT,
  startMnBlk INTEGER,
  endMnBlk INTEGER,
  mnTotalReward INTEGER
@@ -355,14 +355,10 @@ fi
  fi
 
  # Daemon_bin_name URL_to_logo Bot_name
- DAEMON_BIN_LUT="
-energi3 https://s2.coinmarketcap.com/static/img/coins/128x128/3218.png Energi Monitor
-"
+ DAEMON_BIN_LUT="energi3 https://s2.coinmarketcap.com/static/img/coins/128x128/3218.png Energi Monitor"
 
  # Daemon_bin_name minimum_balance_to_stake staking_reward mn_reward_factor confirmations cooloff_seconds networkhashps_multiplier ticker_name blocktime_seconds
- DAEMON_BALANCE_LUT="
-energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
-"
+ DAEMON_BALANCE_LUT="energi3 1 2.28 0.914 101 3600 0.000001 NRG 60"
 
  # Add timestamp to Log
  function log {
@@ -386,9 +382,7 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
 
  # Check if FIRST version is greater than SECOND version
  _version_gt() { 
- 
-   test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; 
-  
+   test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1";
 }
 
  # Create a service that runs every minute.
@@ -564,7 +558,7 @@ RESET_NODEMON () {
 
   if [[ -z "${SERVER_INFO}" ]]
   then
-    SERVER_INFO=$( date -Ru )
+    SERVER_INFO=$( date -R )
     # Show Server Alias.
     SERVER_ALIAS=$( SQL_QUERY "SELECT value FROM variables WHERE key = 'server_alias';" )
     if [[ -z "${SERVER_ALIAS}" ]]
@@ -573,8 +567,7 @@ RESET_NODEMON () {
     fi
     if [[ ! -z "${SERVER_ALIAS}" ]]
     then
-      SERVER_INFO="${SERVER_INFO}
-- ${SERVER_ALIAS}"
+      SERVER_INFO="${SERVER_INFO} - ${SERVER_ALIAS}"
     fi
 
     # Show IP Address.
@@ -585,8 +578,7 @@ RESET_NODEMON () {
     fi
     if [[ ! -z "${IP_ADDRESS}" ]]
     then
-      SERVER_INFO="${SERVER_INFO}
-- ${IP_ADDRESS}"
+      SERVER_INFO="${SERVER_INFO} - ${IP_ADDRESS}"
     fi
   fi
 
@@ -604,8 +596,7 @@ RESET_NODEMON () {
     then
       ALT_DESC="${ALT_DESC}${LINE}\n"
     else
-      ALT_DESC="${ALT_DESC}
-${LINE}\n"
+      ALT_DESC="${ALT_DESC}${LINE}\n"
     fi
   done <<< "${DESCRIPTION}"
 
@@ -791,7 +782,7 @@ PAYLOAD
 
   if [[ -z "${SERVER_INFO}" ]]
   then
-    SERVER_INFO=$( date -Ru )
+    SERVER_INFO=$( date -R )
     SHOW_IP=$( SQL_QUERY "SELECT value FROM variables WHERE key = 'show_ip';" )
     if [[ "${SHOW_IP}" -gt 0 ]]
     then
@@ -808,9 +799,7 @@ PAYLOAD
     fi
   fi
 
-  _PAYLOAD="text=<b>${TITLE}</b>
-<i>${SERVER_INFO}</i>
-${MESSAGE}"
+  _PAYLOAD="text=<b>${TITLE}</b><i>${SERVER_INFO}</i>${MESSAGE}"
 
   URL="https://api.telegram.org/bot$TOKEN/sendMessage"
   TELEGRAM_MSG=$( curl -s -X POST "${URL}" -d "chat_id=${CHAT_ID}&parse_mode=html" -d "${_PAYLOAD}" | sed '/^[[:space:]]*$/d' )
@@ -1143,7 +1132,7 @@ ${MESSAGE}"
 
 
   # Get past events.
-  UNIX_TIME=$( date -u +%s )
+  UNIX_TIME=$( date +%s )
   MESSAGE_PAST=$( SQL_QUERY "SELECT start_time,last_ping_time,message FROM system_log WHERE name == '${NAME}'; " )
   START_TIME=$( echo "${MESSAGE_PAST}" | cut -d \| -f1 )
   if [[ ! ${START_TIME} =~ ${RE} ]]
@@ -1245,7 +1234,7 @@ ${MESSAGE}"
   local DISCORD_WEBHOOK_AVATAR=${7}
 
   # Get past events.
-  UNIX_TIME=$( date -u +%s )
+  UNIX_TIME=$( date +%s )
   MESSAGE_PAST=$( SQL_QUERY "SELECT start_time,last_ping_time,message FROM node_log WHERE conf_loc == '${DATADIR}' AND type == '${TYPE}'; " )
   START_TIME=$( echo "${MESSAGE_PAST}" | head -n1 | cut -d \| -f1 )
   if [[ ! ${START_TIME} =~ ${RE} ]]
@@ -1331,7 +1320,7 @@ ${MESSAGE}"
   then
     LAST_LOGIN_TIME_CHECK=0
   fi
-  UNIX_TIME=$( date -u +%s )
+  UNIX_TIME=$( date +%s )
 
   while read -r DATE_1 DATE_2 DATE_3 LINE
   do
@@ -1340,7 +1329,7 @@ ${MESSAGE}"
       continue
     fi
 
-    UNIX_TIME_LOG=$( date -u --date="${DATE_1} ${DATE_2} ${DATE_3}" +%s )
+    UNIX_TIME_LOG=$( date --date="${DATE_1} ${DATE_2} ${DATE_3}" +%s )
     if [[ "${LAST_LOGIN_TIME_CHECK}" -gt "${UNIX_TIME_LOG}" ]]
     then
       continue
@@ -1521,7 +1510,7 @@ ${MESSAGE}"
   then
     LAST_OOM_TIME_CHECK=0
   fi
-  UNIX_TIME=$( date -u +%s )
+  UNIX_TIME=$( date +%s )
 
   while read -r DATE_1 DATE_2 DATE_3 LINE
   do
@@ -1530,7 +1519,7 @@ ${MESSAGE}"
       continue
     fi
 
-    UNIX_TIME_LOG=$( date -u --date="${DATE_1} ${DATE_2} ${DATE_3}" +%s )
+    UNIX_TIME_LOG=$( date --date="${DATE_1} ${DATE_2} ${DATE_3}" +%s )
     if [[ "${LAST_OOM_TIME_CHECK}" -gt "${UNIX_TIME_LOG}" ]]
     then
       continue
@@ -1554,7 +1543,7 @@ ${MESSAGE}"
   then
     CHECK_CLOCK_LAST_RUN=0
   fi
-  UNIX_TIME=$( date -u +%s )
+  UNIX_TIME=$( date +%s )
   # Only run once every 30 min.
   CHECK_CLOCK_LAST_RUN=$(( CHECK_CLOCK_LAST_RUN + 1800 ))
   if [[ "${CHECK_CLOCK_LAST_RUN}" -gt "${UNIX_TIME}" ]]
@@ -1651,11 +1640,9 @@ ${MESSAGE}"
     DEBSUMS_OUTPUT=$( sudo debsums -c 2>&1 )
     if [[ ! -z "${DEBSUMS_OUTPUT}" ]]
     then
-      MESSAGE_ERROR="There are still issues with the 'debsums -c' command:
-${DEBSUMS_OUTPUT}"
+      MESSAGE_ERROR="There are still issues with the 'debsums -c' command:${DEBSUMS_OUTPUT}"
     else
-      MESSAGE_WARNING="The following packages were reinstalled:
-${BROKEN_PACKAGES}"
+      MESSAGE_WARNING="The following packages were reinstalled:${BROKEN_PACKAGES}"
     fi
 
     # Debug Output
@@ -1679,7 +1666,7 @@ ${BROKEN_PACKAGES}"
   then
     RKHUNTER_LAST_RUN=0
   fi
-  UNIX_TIME=$( date -u +%s )
+  UNIX_TIME=$( date +%s )
   # Only run once every 2 hours.
   RKHUNTER_LAST_RUN=$(( RKHUNTER_LAST_RUN + 7200 ))
   if [[ "${RKHUNTER_LAST_RUN}" -gt "${UNIX_TIME}" ]]
@@ -1725,8 +1712,7 @@ ${BROKEN_PACKAGES}"
 
   if [[ ! -z "${RKHUNTER_OUTPUT}" ]]
   then
-    MESSAGE_ERROR="There are issues with the 'rkhunter -c --rwo' command:
-${RKHUNTER_OUTPUT}"
+    MESSAGE_ERROR="There are issues with the 'rkhunter -c --rwo' command:${RKHUNTER_OUTPUT}"
 
   fi
 
