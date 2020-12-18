@@ -91,10 +91,8 @@ do
                 echo "Address: ${MNLIST} 
 Rank: ${COUNTER} 
 ETA: ${TIME_TO_REWARD}"
-                exit
             fi
         done
-
         rm mnList.json
     fi
 done
