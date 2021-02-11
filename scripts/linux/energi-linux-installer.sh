@@ -932,10 +932,16 @@ _secure_host() {
 
 _remove_two_factor() {
 
+  local ETC_DIR=${USRHOME}/etc
+
   # Remove 2FA from USRHOME
   if [[ -f "${USRHOME}/.google_authenticator" ]]
   then
       rm -f "${USRHOME}/.google_authenticator"
+      if [[ ! -f "${ETC_DIR}/otp.php" ]]
+      then
+          rm -rf "${ETC_DIR}"
+      fi
       echo "2FA has been removed for user ${USRNAME}!"
   fi
   
@@ -948,10 +954,7 @@ _setup_two_factor() {
   ${SUDO} update-rc.d apache2 disable 2>/dev/null
   ${SUDO} update-rc.d apache2 remove 2>/dev/null
   
-  if [[ -z ${ETC_DIR} ]]
-  then
-    export ETC_DIR=${ENERGI_HOME}/etc
-  fi
+  local ETC_DIR=${USRHOME}/etc
 
   # Ask to review if .google_authenticator file already exists.
   if [[ -s "${USRHOME}/.google_authenticator" ]]
@@ -1000,10 +1003,6 @@ _setup_two_factor() {
     if [[ ! -d "${ETC_DIR}" ]]
     then
         mkdir -p "${ETC_DIR}"
-        if [[ ${EUID} = 0 ]]
-        then
-          chown ${USRNAME}:${USRNAME} "${ETC_DIR}"
-        fi
     fi
    
     cd ${ETC_DIR}
@@ -1015,7 +1014,7 @@ _setup_two_factor() {
   
   if [[ ${EUID} = 0 ]]
   then
-    chown ${USRNAME}:${USRNAME} "${ETC_DIR}/otp.php"
+    chown -R ${USRNAME}:${USRNAME} "${ETC_DIR}"
   fi
 
   # Generate otp.
