@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Copyright (c) 2020
+# Copyright (c) 2021
 # All rights reserved.
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 #
@@ -19,6 +19,8 @@
 #   1.3.3  20200129  ZA bug fix and enhancements; supports both v3.0.x and v3.1+
 #   1.3.4  20200204  ZA systemd service filename for v3.0.x updated
 #   1.3.5  20200205  ZA Updated --help
+#   1.3.6  20200208  ZA Add: create log directory in systemd
+#   1.3.7  20200209  ZA MR Comments
 #
 : '
 # Run the script to get started:
@@ -28,7 +30,6 @@ bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi
 Syntax: energi-linux-installer.sh ['' arguments]
 Energi installer arguments (optional):
     -b  --bootstrap           : Sync node using Bootstrap
-    -n  --no-interaction      : No interaction mode (not implemented)
     -t  --testnet             : Setup testnet
     -r  --rsa                 : Setup token based login
     -f  --2fa                 : Setup 2-Factor Authentication
@@ -64,6 +65,9 @@ TP_URL="${BASE_URL}/thirdparty"
 DOC_URL="https://support.energi.world/"
 export S3URL=${S3URL:-"https://s3-us-west-2.amazonaws.com/download.energi.software/releases/energi3"}
 
+# Externalize NODE_MAX_PEERS
+export NODE_MAX_PEERS=${NODE_MAX_PEERS:-128}
+
 # Set Executables & Configuration
 export ENERGI_CONF=energi.toml
 export ENERGI_IPC=energi3.ipc
@@ -83,6 +87,11 @@ RED=`tput setaf 1`
 GREEN=`tput setaf 2`
 YELLOW=`tput setaf 2`
 NC=`tput sgr0`
+
+# Wait times
+WAIT_LOGO=0.2
+WAIT_EXEC=0.3
+WAIT_DISPLAY=0.5
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 # Functions
@@ -112,22 +121,22 @@ _os_arch () {
   then
     echo "${GREEN}${OSPLATFORM} is supported${NC}"
     OSARCH=amd64
-    sleep 0.3
+    sleep ${WAIT_EXEC}
   elif [ "${OSPLATFORM}" = "i686" ]
   then
     echo "${GREEN}${OSPLATFORM} is supported${NC}"
     OSARCH=i686
-    sleep 0.3
+    sleep ${WAIT_EXEC}
   elif [ "${OSPLATFORM}" = "aarch64" ]
   then
     echo "${GREEN}${OSPLATFORM} is supported${NC}"
     OSARCH=armv8
-    sleep 0.3
+    sleep ${WAIT_EXEC}
   elif [ "${OSPLATFORM}" = "armv7l" ]
   then
     echo "${GREEN}${OSPLATFORM} is supported${NC}"
     OSARCH=armv7
-    sleep 0.3
+    sleep ${WAIT_EXEC}
   else
     echo "${RED}${OSPLATFORM} is not supported with the installer${NC}"
     echo "Please check our website for supported platforms."
@@ -252,7 +261,7 @@ SUDO_CONF
   echo
   echo "${GREEN}*** User ${USRNAME} created and added to sudoer group                       ***${NC}"
   echo "${GREEN}*** User ${USRNAME} will be used to install the software and configurations ***${NC}"
-  sleep 0.3
+  sleep ${WAIT_EXEC}
   
 }
 
@@ -297,7 +306,7 @@ _check_install () {
       INSTALLTYPE=upgrade
       echo "The script will upgrade to the latest version of energi from Github"
       echo "if available as user: ${GREEN}${USRNAME}${NC}"
-      sleep 0.3
+      sleep ${WAIT_EXEC}
       
       export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
       export ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
@@ -384,7 +393,7 @@ _setup_appdir () {
 
   # Setup application directories if does not exist  
   echo "Energi will be installed in ${ENERGI_HOME}"
-  sleep 0.5
+  sleep ${WAIT_DISPLAY}
   # Set application directories
   export BIN_DIR=${ENERGI_HOME}/bin
   export ETC_DIR=${ENERGI_HOME}/etc
@@ -471,7 +480,7 @@ _set_ismainnet () {
 
   fi
   echo
-  sleep 0.3
+  sleep ${WAIT_EXEC}
 }
 
 _install_apt () {
@@ -484,26 +493,26 @@ _install_apt () {
     echo
     echo "Updating linux first."
     echo "    Running apt-get update."
-    sleep 1
+    sleep ${WAIT_DISPLAY}
     ${SUDO} apt-get update -yq 2> /dev/null
     echo "    Running apt-get upgrade."
-    sleep 1
+    sleep ${WAIT_DISPLAY}
     ${SUDO} apt-get upgrade -yq 2> /dev/null
     echo "    Running apt-get dist-upgrade."
-    sleep 1
+    sleep ${WAIT_DISPLAY}
     ${SUDO} apt-get -yq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade 2> /dev/null
 
     if [ ! -x "$( command -v unattended-upgrade )" ]
     then
       echo "    Running apt-get install unattended-upgrades php ufw."
-      sleep 1
+      sleep ${WAIT_DISPLAY}
       ${SUDO} apt-get install -yq unattended-upgrades php ufw 2> /dev/null
       
       if [ ! -f /etc/apt/apt.conf.d/20auto-upgrades ]
       then
         # Enable auto updating of Ubuntu security packages.
         echo "Setting up server to update security related packages anytime they are available"
-        sleep 0.3
+        sleep ${WAIT_EXEC}
         cat << UBUNTU_SECURITY_PACKAGES | ${SUDO} tee /etc/apt/apt.conf.d/20auto-upgrades >/dev/null
 APT::Periodic::Enable "1";
 APT::Periodic::Download-Upgradeable-Packages "1";
@@ -577,7 +586,7 @@ _add_logrotate () {
       then
         chown -R ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
       fi
-      sleep 0.3
+      sleep ${WAIT_EXEC}
     fi
     cat << ENERGI_LOGROTATE | ${SUDO} tee /etc/logrotate.d/${ENERGI_EXE} >/dev/null
 ${CONF_DIR}/energi3/log/*.log {
@@ -602,7 +611,7 @@ _add_systemd () {
   if [ ! -f /lib/systemd/system/${ENERGI_EXE}.service ]
   then
     echo "Setting up systemctl to automatically start energi after reboot..."
-    sleep 0.3
+    sleep ${WAIT_EXEC}
     EXTIP=`curl -s https://ifconfig.me/`
     cat << SYSTEMD_CONF | ${SUDO} tee /lib/systemd/system/${ENERGI_EXE}.service >/dev/null
 [Unit]
@@ -618,6 +627,7 @@ RestartSec=5
 User=${USRNAME}
 Group=${USRNAME}
 UMask=0027
+ExecStartPre=/bin/mkdir -p ${CONF_DIR}/energi3/log 2>/dev/null
 ExecStartPre=/bin/chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
 ExecStartPre=/bin/chmod 750 ${CONF_DIR}/energi3/log
 ExecStartPre=/bin/touch ${CONF_DIR}/energi3/log/energi_stdout.log
@@ -628,7 +638,7 @@ StandardError=file:${CONF_DIR}/energi3/log/energi_stdout.log
 ExecStart=${BIN_DIR}/${ENERGI_EXE} ${APPARG} \\
   --datadir ${CONF_DIR} \\
   --gcmode archive \\
-  --maxpeers 128 \\
+  --maxpeers ${NODE_MAX_PEERS} \\
   --masternode \\
   --mine \\
   --nat extip:${EXTIP} \\
@@ -683,10 +693,10 @@ _install_energi () {
   cd ${USRHOME}
   # Download energi from Amazon S3
   wget -4qo- "${S3URL}/${GIT_VERSION_NUM}/${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz" --show-progress --progress=bar:force:noscroll 2>&1
-  sleep 0.3
+  sleep ${WAIT_EXEC}
   
   tar xvfz ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz
-  sleep 0.3
+  sleep ${WAIT_EXEC}
   
   # Copy latest energi and cleanup
   if [[ -x "${BIN_DIR}/${ENERGI_EXE}" ]]
@@ -816,7 +826,7 @@ _upgrade_energi () {
   else
     echo "Latest version of Energi is installed: ${INSTALL_VERSION}"
     echo "Nothing to install"
-    sleep 0.3
+    sleep ${WAIT_EXEC}
     
   fi
 
@@ -833,12 +843,12 @@ _restrict_logins() {
     ${SUDO} cat /etc/sudoers | sed -r 's/^Defaults(\s+)env_reset$/Defaults\1env_reset,pwfeedback/' | sudo EDITOR='tee ' visudo >/dev/null
     echo "Restarting ssh."
     ${SUDO} systemctl restart sshd
-    sleep 0.2
+    sleep ${WAIT_EXEC}
     SSHSTATUS=`${SUDO} systemctl status sshd | grep Active | awk '{print $2}'`
     if [ "${SSHSTATUS}" != "active" ]
     then
       echo "${RED}CRITICAL: sshd did not start correctly. Check configuration file${NC}"
-      sleep 1
+      sleep ${WAIT_DISPLAY}
     fi
   fi
 
@@ -872,7 +882,7 @@ _restrict_logins() {
 #  read -p "Make it so only the above list of users can login via SSH ([y]/n)?: " -r
 #  REPLY=${REPLY,,} # tolower
   echo "Only the above list of users can login via SSH"
-  sleep 0.3
+  sleep ${WAIT_EXEC}
   if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
   then
     if [[ $( grep -cE '^AllowUsers' /etc/ssh/sshd_config ) -eq 0 ]]
@@ -884,12 +894,12 @@ _restrict_logins() {
     USRS_THAT_CAN_LOGIN=$( grep -E '^AllowUsers' /etc/ssh/sshd_config | sed -e 's/^AllowUsers //g' | tr " " '\n' )
     echo "Restarting ssh."
     ${SUDO} systemctl restart sshd
-    sleep 0.2
+    sleep ${WAIT_EXEC}
     SSHSTATUS=`${SUDO} systemctl status sshd | grep Active | awk '{print $2}'`
     if [ "${SSHSTATUS}" != "active" ]
     then
       echo "${RED}CRITICAL: sshd did not start correctly. Check configuration file${NC}"
-      sleep 1
+      sleep ${WAIT_DISPLAY}
     fi
     echo "List of users that can login via SSH (/etc/ssh/sshd_config):"
     echo ${USRS_THAT_CAN_LOGIN}
@@ -1287,7 +1297,7 @@ _start_energi () {
     then
       echo "Starting Energi Core Node...."
       ${SUDO} systemctl daemon-reload
-      sleep 0.3
+      sleep ${WAIT_EXEC}
       ${SUDO} systemctl start energi.service
     else
       echo "energi service is running..."
@@ -1300,7 +1310,7 @@ _start_energi () {
     then
       echo "Starting Energi Core Node...."
       ${SUDO} systemctl daemon-reload
-      sleep 0.3
+      sleep ${WAIT_EXEC}
       ${SUDO} systemctl start energi3.service
     else
       echo "energi service is running..."
@@ -1321,7 +1331,7 @@ _stop_energi () {
     then
       echo "Stopping Energi Core Node..."
       ${SUDO} systemctl stop energi.service
-      sleep 1
+      sleep ${WAIT_EXEC}
     else
       echo "energi service is not running..."
     fi
@@ -1334,7 +1344,7 @@ _stop_energi () {
     then
       echo "Stopping Energi3 Core Node..."
       ${SUDO} systemctl stop energi3.service
-      sleep 1
+      sleep ${WAIT_EXEC}
     else
       echo "energi3 service is not running..."
     fi
@@ -1350,10 +1360,10 @@ _get_enode () {
   I=1
   while [ ! -S ${CONF_DIR}/energi3.ipc ] || [ ${I} = 60 ]
   do
-    sleep 1
+    sleep ${WAIT_DISPLAY}
     ((I++))
   done
-  sleep 1
+  sleep ${WAIT_EXEC}
   
   if [[ ${EUID} = 0 ]] && [[ -S ${CONF_DIR}/energi3.ipc ]]
   then
@@ -1654,20 +1664,17 @@ do
         _check_install
         _set_ismainnet
         _stop_nodemon
-        sleep 0.3
+        sleep ${WAIT_EXEC}
         _stop_energi
-        sleep 0.3
+        sleep ${WAIT_EXEC}
         ${ENERGI_EXE} ${APPARG} removedb
-        sleep 0.3
+        sleep ${WAIT_EXEC}
         _download_bootstrap
-        sleep 0.3
+        sleep ${WAIT_EXEC}
         _start_energi
-        sleep 0.3
+        sleep ${WAIT_EXEC}
         _start_nodemon
         exit 0
-        ;;
-    -n|--no-interaction)
-        INTERACTIVE="n"
         ;;
     -t|--testnet|-testnet)
         isMainnet="n"
@@ -1720,7 +1727,6 @@ Syntax: energi-linux-installer.sh ['' arguments]
 
 arguments (optional):
     -b  --bootstrap           : Sync node using Bootstrap
-    -n  --no-interaction      : No interaction mode (not implemented)
     -t  --testnet             : Setup testnet
     -r  --rsa                 : Setup token based login
     -f  --2fa                 : Setup 2-Factor Authentication
@@ -1743,15 +1749,15 @@ done
 #
 # Clears screen and present Energi logo
 _ascii_logo_bottom
-sleep 0.2
+sleep ${WAIT_LOGO}
 _ascii_logo_2
-sleep 0.2
+sleep ${WAIT_LOGO}
 _ascii_logo_3
-sleep 0.2
+sleep ${WAIT_LOGO}
 _ascii_logo_4
-sleep 0.2
+sleep ${WAIT_LOGO}
 _ascii_logo_5
-sleep 0.2
+sleep ${WAIT_LOGO}
 _welcome_instructions
 
 # Check architecture
