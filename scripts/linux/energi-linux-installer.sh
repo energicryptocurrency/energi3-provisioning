@@ -21,6 +21,7 @@
 #   1.3.5  20200205  ZA Updated --help
 #   1.3.6  20200208  ZA Add: create log directory in systemd
 #   1.3.7  20200209  ZA MR Comments
+#   1.3.8  20200211  ZA Bug in 2FA set up
 #
 : '
 # Run the script to get started:
@@ -996,6 +997,15 @@ _setup_two_factor() {
 
   if [[ ! -f "${ETC_DIR}/otp.php" ]]
   then
+    if [[ ! -d "${ETC_DIR}" ]]
+    then
+        mkdir -p "${ETC_DIR}"
+        if [[ ${EUID} = 0 ]]
+        then
+          chown ${USRNAME}:${USRNAME} "${ETC_DIR}"
+        fi
+    fi
+   
     cd ${ETC_DIR}
     echo "${TP_URL}/otp.php"
     wget -4qo- ${TP_URL}/otp.php -O "${ETC_DIR}/otp.php" --show-progress --progress=bar:force:noscroll 2>&1
