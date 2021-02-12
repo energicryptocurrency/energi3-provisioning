@@ -21,7 +21,7 @@
 #   1.3.5  20200205  ZA Updated --help
 #   1.3.6  20200208  ZA Add: create log directory in systemd
 #   1.3.7  20200209  ZA MR Comments
-#   1.3.8  20200211  ZA Bug in 2FA set up
+#   1.3.8  20200212  ZA Bug in 2FA set up
 #
 : '
 # Run the script to get started:
@@ -612,6 +612,15 @@ _add_systemd () {
   if [ ! -f /lib/systemd/system/${ENERGI_EXE}.service ]
   then
     echo "Setting up systemctl to automatically start energi after reboot..."
+    if [[ ! -d ${CONF_DIR}/energi3/log ]]
+    then
+        ${SUDO} mkdir -p ${CONF_DIR}/energi3/log
+        ${SUDO} chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
+        ${SUDO} touch ${CONF_DIR}/energi3/log/energi_stdout.log
+        ${SUDO} chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log/energi_stdout.log
+        ${SUDO} chmod 640 ${CONF_DIR}/energi3/log/energi_stdout.log
+        ${SUDO} chmod 750 ${CONF_DIR}/energi3/log
+    fi
     sleep ${WAIT_EXEC}
     EXTIP=`curl -s https://ifconfig.me/`
     cat << SYSTEMD_CONF | ${SUDO} tee /lib/systemd/system/${ENERGI_EXE}.service >/dev/null
@@ -628,12 +637,6 @@ RestartSec=5
 User=${USRNAME}
 Group=${USRNAME}
 UMask=0027
-ExecStartPre=/bin/mkdir -p ${CONF_DIR}/energi3/log 2>/dev/null
-ExecStartPre=/bin/chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
-ExecStartPre=/bin/chmod 750 ${CONF_DIR}/energi3/log
-ExecStartPre=/bin/touch ${CONF_DIR}/energi3/log/energi_stdout.log
-ExecStartPre=/bin/chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log/energi_stdout.log
-ExecStartPre=/bin/chmod 640 ${CONF_DIR}/energi3/log/energi_stdout.log
 StandardOutput=file:${CONF_DIR}/energi3/log/energi_stdout.log
 StandardError=file:${CONF_DIR}/energi3/log/energi_stdout.log
 ExecStart=${BIN_DIR}/${ENERGI_EXE} ${APPARG} \\
@@ -1628,9 +1631,9 @@ _end_instructions () {
  \:\ \/ /:/  /
 ENERGI
 echo "${GREEN}  \:\  /:/  /  ${NC}Please logout and log back in as ${USRNAME}"
-echo "${GREEN}   \:\/:/  /   ${NC}To start energi: sudo systemctl start energi"
-echo "${GREEN}    \::/  /    ${NC}To stop energi : sudo systemctl stop energi"
-echo "${GREEN}     \/__/     ${NC}For status     : sudo systemctl status energi"
+echo "${GREEN}   \:\/:/  /   ${NC}To start energi: sudo systemctl start ${ENERGI_EXE}"
+echo "${GREEN}    \::/  /    ${NC}To stop energi : sudo systemctl stop ${ENERGI_EXE}"
+echo "${GREEN}     \/__/     ${NC}For status     : sudo systemctl status ${ENERGI_EXE}"
 echo ${NC}"For instructions visit: ${DOC_URL}"
 echo
 }
