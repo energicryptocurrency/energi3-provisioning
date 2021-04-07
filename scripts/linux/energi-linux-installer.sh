@@ -22,6 +22,7 @@
 #   1.3.6  20200208  ZA Add: create log directory in systemd
 #   1.3.7  20200209  ZA MR Comments
 #   1.3.8  20200212  ZA Bug in 2FA set up
+#   1.3.9  20210407  ZA Update --mine to --mine=1 for v3.0.8
 #
 : '
 # Run the script to get started:
@@ -644,7 +645,7 @@ ExecStart=${BIN_DIR}/${ENERGI_EXE} ${APPARG} \\
   --gcmode archive \\
   --maxpeers ${NODE_MAX_PEERS} \\
   --masternode \\
-  --mine \\
+  --mine=1 \\
   --nat extip:${EXTIP} \\
   --verbosity 0
 WorkingDirectory=${USRHOME}
