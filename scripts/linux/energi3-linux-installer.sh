@@ -567,7 +567,7 @@ UMask=0027
 ExecStart=${BIN_DIR}/energi3 \
 --datadir ${CONF_DIR} \
 --masternode \
---mine \
+--mine=1 \
 --nat extip:${EXTIP} \
 --preload ${JS_DIR}/utils.js \
 --rpc \
