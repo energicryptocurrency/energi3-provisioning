@@ -50,8 +50,8 @@ then
 fi
 
 # Set API server
-#export NRGAPI="https://explorer.energi.network/api"
-export NRGAPI="http://mainnet.energi.cloudns.cl:4000/api"
+export NRGAPI="https://explorer.energi.network/api"
+#export NRGAPI="http://mainnet.energi.cloudns.cl:4000/api"
 
 echo "Downloading internal transactions..."
 curl -H "accept: application/json" -s "${NRGAPI}?module=account&action=txlistinternal&address=${ADDR}&startblock=${STARTBLK}&endblock=${ENDBLK}" -H "accept: application/json" > list_int_tran.txt
