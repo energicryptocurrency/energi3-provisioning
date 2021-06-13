@@ -1135,8 +1135,8 @@ _copy_keystore() {
 
   # Copy Energi3 keystore file to computer
 
-  # Download ffsend if needed
-    # Install ffsend and jq as well.
+  # Download bw if needed
+    # Install bw and jq as well.
   if [ ! -x "$( command -v snap )" ] || [ ! -x "$( command -v jq )" ] || [ ! -x "$( command -v column )" ]
   then
     echo "Installing snap, snapd, bsdmainutils"
@@ -1144,17 +1144,17 @@ _copy_keystore() {
     ${SUDO} apt-get install -yq snapd 2>/dev/null
     ${SUDO} apt-get install -yq jq bsdmainutils 2>/dev/null
   fi
-  if [ ! -x "$( command -v ffsend )" ]
+  if [ ! -x "$( command -v bw )" ]
   then
-    ${SUDO} snap install ffsend
+    ${SUDO} snap install bw
   fi
 
-  if [ ! -x "$( command -v ffsend )" ]
+  if [ ! -x "$( command -v bw )" ]
   then
-    FFSEND_URL=$( wget -4qO- -o- https://api.github.com/repos/timvisee/ffsend/releases/latest | jq -r '.assets[].browser_download_url' | grep static | grep linux )
+    FFSEND_URL=$( wget -4qO- -o- https://api.github.com/repos/timvisee/bw/releases/latest | jq -r '.assets[].browser_download_url' | grep static | grep linux )
     cd "${ENERGI3_HOME}/bin/"
-    wget -4q -o- "${FFSEND_URL}" -O "ffsend"
-    chmod 755 "ffsend"
+    wget -4q -o- "${FFSEND_URL}" -O "bw"
+    chmod 755 "bw"
     cd -
   fi
   
@@ -1163,13 +1163,13 @@ _copy_keystore() {
   echo "Next we will copy the keystore file from your desktop to the VPS."
   echo "To start click on link below:"
   echo
-  echo "https://send.firefox.com/"
+  echo "https://send.bitwarden.com/"
   echo
-  echo "Once upload completes, copy the URL from Firefox and paste below:"
+  echo "Once upload completes, copy the URL from Bitwarden and paste below:"
   sleep .3
   echo
   REPLY=''
-  while [[ -z "${REPLY}" ]] || [[ "$( echo "${REPLY}" | grep -c 'https://send.firefox.com/download/' )" -eq 0 ]]
+  while [[ -z "${REPLY}" ]] || [[ "$( echo "${REPLY}" | grep -c 'https://send.bitwarden.com/' )" -eq 0 ]]
   do
     read -p "Paste URL (leave blank and hit ENTER to do it manually): " -r
     if [[ -z "${REPLY}" ]]
@@ -1199,11 +1199,11 @@ _copy_keystore() {
 
     # Trim white space.
     REPLY=$( echo "${REPLY}" | xargs )
-    if [[ -f "${ENERGI3_HOME}/bin/ffsend" ]]
+    if [[ -f "${ENERGI3_HOME}/bin/bw" ]]
     then
-      "${ENERGI3_HOME}/bin/ffsend" download -y --verbose "${REPLY}" -o "${TEMP_DIR_NAME}/"
+      "${ENERGI3_HOME}/bin/bw" receive "${REPLY}" --output "${TEMP_DIR_NAME}/"
     else
-      ffsend download -y --verbose "${REPLY}" -o "${TEMP_DIR_NAME}/"
+      bw receive "${REPLY}" --output "${TEMP_DIR_NAME}/"
     fi
 
     KEYSTOREFILE=$( find "${TEMP_DIR_NAME}/" -type f )
