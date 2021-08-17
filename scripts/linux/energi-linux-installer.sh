@@ -23,6 +23,7 @@
 #   1.3.7  20200209  ZA MR Comments
 #   1.3.8  20200212  ZA Bug in 2FA set up
 #   1.3.9  20210407  ZA Update --mine to --mine=1 for v3.0.8
+#   1.3.10 20210817  ZA Update for v3.1.0; no change in binary name
 #
 : '
 # Run the script to get started:
@@ -382,15 +383,15 @@ _setup_appdir () {
     # Extract latest version number without the 'v'
     GIT_VERSION_NUM=$( echo ${GIT_VERSION} | sed 's/v//g' )
   
-    # Check if v3.1+ is available on Github
-    if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
-      ENERGI_EXE=energi
-      ENERGI_HOME=${USRHOME}/${ENERGI_EXE}    
-    
-    else
-      ENERGI_EXE=energi3
-      ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
-    fi
+    # Check if v3.1+ is available on Github - Keep same for v3.1.0
+    #if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
+    #  ENERGI_EXE=energi
+    #  ENERGI_HOME=${USRHOME}/${ENERGI_EXE}    
+    #
+    #else
+    ENERGI_EXE=energi3
+    ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
+    #fi
   fi
 
   # Setup application directories if does not exist  
@@ -683,13 +684,13 @@ _install_energi () {
     GIT_VERSION_NUM=$( echo ${GIT_VERSION} | sed 's/v//g' )
   
     # Check if v3.1+ is available on Github
-    if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
-      ENERGI_EXE=energi
-      ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
-    else
-      ENERGI_EXE=energi3
-      ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
-    fi
+    #if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
+    #  ENERGI_EXE=energi
+    #  ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
+    #else
+    ENERGI_EXE=energi3
+    ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
+    #fi
   fi
   
   # Download from repositogy
@@ -723,7 +724,6 @@ _install_energi () {
   # Create missing app directories
   _setup_appdir
   
-  
   cd ${BIN_DIR}
 
   chmod 755 ${ENERGI_EXE}
@@ -756,43 +756,43 @@ _upgrade_energi () {
   fi
   
   # Check if v3.1+ is available on Github
-  if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
+  #if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
 
     # Rename energi3 if 3.1.x and above is released
-    if [[ -d ${USRHOME}/energi3 ]]
-    then
-            
-      export ENERGI_EXE=energi
-      export ENERGI_HOME="${USRHOME}/${ENERGI_EXE}"
-      
-      mv ${USRHOME}/energi3/bin/energi3 ${USRHOME}/energi3/bin/energi
-      mv ${USRHOME}/energi3 ${USRHOME}/energi
-      if [[ -f /etc/logrotate.d/energi3 ]]
-      then
-        ${SUDO} rm /etc/logrotate.d/energi3
-      fi
-      
-      if [[ -f /lib/systemd/system/energi3.service ]]
-      then
-        ${SUDO} systemctl disable energi3.service
-        ${SUDO} rm /lib/systemd/system/energi3.service
-      fi
-      
-      # Update PATH variable for Energi
-      CHKBASHRC=`grep "Energi3 PATH" "${USRHOME}/.bashrc"`
-      if [ ! -z "${CHKBASHRC}" ]
-      then
-        sed -i 's/Energi3/Energi/g' "${USRHOME}/.bashrc"
-        sed -i 's/energi3/energi/g' "${USRHOME}/.bashrc"
-        source ${USRHOME}/.bashrc
-      fi
-    fi
+    #if [[ -d ${USRHOME}/energi3 ]]
+    #then
+    #        
+    #  export ENERGI_EXE=energi
+    #  export ENERGI_HOME="${USRHOME}/${ENERGI_EXE}"
+    #  
+    #  mv ${USRHOME}/energi3/bin/energi3 ${USRHOME}/energi3/bin/energi
+    #  mv ${USRHOME}/energi3 ${USRHOME}/energi
+    #  if [[ -f /etc/logrotate.d/energi3 ]]
+    #  then
+    #    ${SUDO} rm /etc/logrotate.d/energi3
+    #  fi
+    #  
+    #  if [[ -f /lib/systemd/system/energi3.service ]]
+    #  then
+    #    ${SUDO} systemctl disable energi3.service
+    #    ${SUDO} rm /lib/systemd/system/energi3.service
+    #  fi
+    #  
+    #  # Update PATH variable for Energi
+    #  CHKBASHRC=`grep "Energi3 PATH" "${USRHOME}/.bashrc"`
+    #  if [ ! -z "${CHKBASHRC}" ]
+    #  then
+    #    sed -i 's/Energi3/Energi/g' "${USRHOME}/.bashrc"
+    #    sed -i 's/energi3/energi/g' "${USRHOME}/.bashrc"
+    #    source ${USRHOME}/.bashrc
+    #  fi
+    #fi
     
-  else
-    ENERGI_EXE=energi3
-    ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
+  #else
+  ENERGI_EXE=energi3
+  ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
     
-  fi 
+  #fi 
   
   # Set PATH to energi
   export BIN_DIR=${ENERGI_HOME}/bin
@@ -1651,13 +1651,13 @@ BOOTSTRAP="n"
 POSITIONAL=()
 
 # Check if v3.1+ is available on Github
-if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
-  export ENERGI_EXE=energi
-  export ENERGIPATH=Energi
-else
-  export ENERGI_EXE=energi3
-  export ENERGIPATH=Energi3
-fi
+#if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
+#  export ENERGI_EXE=energi
+#  export ENERGIPATH=Energi
+#else
+export ENERGI_EXE=energi3
+export ENERGIPATH=Energi3
+#fi
 
 # Check script arguments
 while [[ $# -gt 0 ]]

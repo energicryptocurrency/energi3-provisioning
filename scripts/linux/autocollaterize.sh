@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Copyright (c) 2020
+# Copyright (c) 2021
 # All rights reserved.
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 #
@@ -9,6 +9,8 @@
 #
 # Version:
 #   1.0.0 20200321 ZA Initial Script
+#   1.1.0 20210112 ZA Update to support v3.1
+#   1.1.1 20210817 ZA Update to support support v3.1.0; no change in binary name
 #
 : '
 # Run the script to get started:
@@ -18,8 +20,9 @@ bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi
 '
 ######################################################################
 
-# Service File location
+# Service File location - adjusted to keep same name
 SERVICEFILE=/lib/systemd/system/energi3.service
+OLDSERVICEFILE=/lib/systemd/system/energi3.service-bogus
 
 # Set colors
 BLUE=`tput setaf 4`
@@ -31,7 +34,7 @@ NC=`tput sgr0`
 # Command functions
 _cmd-collChk () {
     # Check status of autocollateralize
-    SETTO=`energi3 ${ARG} attach --exec "miner.setAutocollateralize()" 2>/dev/null | head -1`
+    SETTO=`energi ${ARG} attach --exec "miner.setAutocollateralize()" 2>/dev/null | head -1`
     if [[ ${SETTO} == 0 ]]
     then
         echo "autocollateralize is set to ${RED}OFF${NC}"
@@ -45,14 +48,14 @@ _cmd-collChk () {
 
 _cmd-collOff () {
     # Turn autocollateralize off
-    energi3 ${ARG} attach --exec "miner.setAutocollateralize(0)" 2>/dev/null 1>/dev/null
+    energi ${ARG} attach --exec "miner.setAutocollateralize(0)" 2>/dev/null 1>/dev/null
     _cmd-collChk
 
 }
 
 _cmd-collOn () {
     # Turn autocollateralize on
-    energi3 ${ARG} attach --exec "miner.setAutocollateralize(1)" 2>/dev/null 1>/dev/null
+    energi ${ARG} attach --exec "miner.setAutocollateralize(1)" 2>/dev/null 1>/dev/null
     _cmd-collChk
 }
 
@@ -66,13 +69,13 @@ then
 else
     clear
     echo
-    echo "Cannot find energi3.service file to update"
+    echo "Cannot find energi.service file to update"
     echo "  Filename: ${SERVICEFILE}"
     echo
     echo "Exiting script..."
     echo
     echo "To manually change setting attach to Core Node:"
-    echo "   energi3 attach"
+    echo "   energi attach"
     echo
     echo "and then run:"
     echo "   miner.setAutocollateralize(0) - to disable"
@@ -86,12 +89,12 @@ fi
 echo "${GREEN}"
 clear 2> /dev/null
 cat << "ENERGI3"
-      ___       ______ _   _ ______ _____   _____ _____ ____
-     /\  \     |  ____| \ | |  ____|  __ \ / ____|_   _|___ \
-    /::\  \    | |__  |  \| | |__  | |__) | |  __  | |   __) |
-   /:/\:\__\   |  __| | . ` |  __| |  _  /| | |_ | | |  |__ <
-  /:/ /:/ _/_  | |____| |\  | |____| | \ \| |__| |_| |_ ___) |
- /:/ /:/ /\__\ |______|_| \_|______|_|  \_\\_____|_____|____/
+      ___       ______ _   _ ______ _____   _____ _____ 
+     /\  \     |  ____| \ | |  ____|  __ \ / ____|_   _|
+    /::\  \    | |__  |  \| | |__  | |__) | |  __  | |  
+   /:/\:\__\   |  __| | . ` |  __| |  _  /| | |_ | | | 
+  /:/ /:/ _/_  | |____| |\  | |____| | \ \| |__| |_| |_ 
+ /:/ /:/ /\__\ |______|_| \_|______|_|  \_\\_____|_____|
  \:\ \/ /:/  /
 ENERGI3
 echo "${GREEN}  \:\  /:/  /  ${NC}This script determines if autocollateralize is enabled"
@@ -150,7 +153,11 @@ case ${OPTION} in
     e)
       if [[ ! -z ${ISDISABLED} ]]
       then
-          echo "Updating energi3.service file for reboots"
+          echo "Updating energi.service file for reboots"
+          if [[ -f ${OLDSERVICEFILE} ]]
+          then
+              sudo mv ${OLDSERVICEFILE} ${SERVICEFILE}
+          fi
           sudo sed -i 's/--miner.autocollateralize 0/--miner.autocollateralize 1/' ${SERVICEFILE}
           sudo systemctl daemon-reload
           echo
@@ -162,7 +169,11 @@ case ${OPTION} in
           # Parameter not there, add to enable
 
           echo
-          echo "Updating energi3.service file for reboots"
+          echo "Updating energi.service file for reboots"
+          if [[ -f ${OLDSERVICEFILE} ]]
+          then
+              sudo mv ${OLDSERVICEFILE} ${SERVICEFILE}
+          fi
           sudo sed -i 's/node/node --miner.autocollateralize 1/' ${SERVICEFILE}
           sudo systemctl daemon-reload
           echo
@@ -181,7 +192,11 @@ case ${OPTION} in
     d)
       if [[ ! -z ${ISENABLED} ]]
       then
-          echo "Updating energi3.service file for reboots"
+          echo "Updating energi.service file for reboots"
+          if [[ -f ${OLDSERVICEFILE} ]]
+          then
+              sudo mv ${OLDSERVICEFILE} ${SERVICEFILE}
+          fi
           sudo sed -i 's/--miner.autocollateralize 1/--miner.autocollateralize 0/' ${SERVICEFILE}
           sudo systemctl daemon-reload
           echo
@@ -191,6 +206,10 @@ case ${OPTION} in
       elif [[ -z ${CHKIFTHERE} ]]
       then
           echo "Updating energi3.service file for reboots"
+          if [[ -f ${OLDSERVICEFILE} ]]
+          then
+              sudo mv ${OLDSERVICEFILE} ${SERVICEFILE}
+          fi
           sudo sed -i 's/node/node --miner.autocollateralize 0/' ${SERVICEFILE}
           sudo systemctl daemon-reload
           echo
