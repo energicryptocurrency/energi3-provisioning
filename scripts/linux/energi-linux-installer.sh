@@ -58,7 +58,7 @@ fi
 export DEBIAN_FRONTEND=noninteractive 
 
 # Locations of Repositories and Guide
-export API_URL=${API_URL:-"https://api.github.com/repos/energicryptocurrency/energi3/releases/latest"}
+export API_URL=${API_URL:-"https://api.github.com/repos/energicryptocurrency/energi/releases/latest"}
 # Production
 export BASE_URL=${BASE_URL:-"raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts"}
 #==> For testing set environment variable
@@ -144,7 +144,7 @@ _os_arch () {
     echo "${RED}${OSPLATFORM} is not supported with the installer${NC}"
     echo "Please check our website for supported platforms."
     echo
-    echo "   https://support.energi.world/hc/en-us/articles/360049082491-Energi-Core-Node-Downloads"
+    echo "   https://wiki.energi.world/en/downloads/core-node"
     echo
     exit 0
   fi
