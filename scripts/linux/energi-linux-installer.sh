@@ -24,6 +24,7 @@
 #   1.3.8  20200212  ZA Bug in 2FA set up
 #   1.3.9  20210407  ZA Update --mine to --mine=1 for v3.0.8
 #   1.3.10 20210817  ZA Update for v3.1.0; no change in binary name
+#   1.3.11 20211220  ZA Core Node rpo change
 #
 : '
 # Run the script to get started:
