@@ -603,11 +603,10 @@ _add_systemd () {
     if [[ ! -d ${CONF_DIR}/energi3/log ]]
     then
         ${SUDO} mkdir -p ${CONF_DIR}/energi3/log
-        ${SUDO} chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
         ${SUDO} touch ${CONF_DIR}/energi3/log/energi_stdout.log
-        ${SUDO} chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log/energi_stdout.log
         ${SUDO} chmod 640 ${CONF_DIR}/energi3/log/energi_stdout.log
         ${SUDO} chmod 750 ${CONF_DIR}/energi3/log
+        ${SUDO} chown -R ${USRNAME}:${USRNAME} ${CONF_DIR}
     fi
     sleep ${WAIT_EXEC}
     EXTIP=`curl -s https://ifconfig.me/`
