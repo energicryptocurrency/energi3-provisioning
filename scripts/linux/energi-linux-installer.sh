@@ -24,7 +24,8 @@
 #   1.3.8  20200212  ZA Bug in 2FA set up
 #   1.3.9  20210407  ZA Update --mine to --mine=1 for v3.0.8
 #   1.3.10 20210817  ZA Update for v3.1.0; no change in binary name
-#   1.3.11 20211220  ZA Core Node rpo change
+#   1.3.11 20211220  ZA Core Node repo change
+#   1.3.12 20211222  ZA Remove bootstrap
 #
 : '
 # Run the script to get started:
@@ -33,7 +34,6 @@ bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi
 
 Syntax: energi-linux-installer.sh ['' arguments]
 Energi installer arguments (optional):
-    -b  --bootstrap           : Sync node using Bootstrap
     -t  --testnet             : Setup testnet
     -r  --rsa                 : Setup token based login
     -f  --2fa                 : Setup 2-Factor Authentication
@@ -43,7 +43,6 @@ Energi installer arguments (optional):
 ```
 '
 ######################################################################
-
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 # Global Variables
@@ -183,7 +182,6 @@ _version_gt() {
 
   # Check if FIRST version is greater than SECOND version
   test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; 
-  
 }
 
 _add_nrgstaker () {
@@ -266,7 +264,6 @@ SUDO_CONF
   echo "${GREEN}*** User ${USRNAME} created and added to sudoer group                       ***${NC}"
   echo "${GREEN}*** User ${USRNAME} will be used to install the software and configurations ***${NC}"
   sleep ${WAIT_EXEC}
-  
 }
 
 _check_install () {
@@ -370,7 +367,6 @@ _check_install () {
   
   # Clean-up temporary file
   rm ${CHKV3USRTMP}
-
 }
 
 _setup_appdir () {
@@ -433,7 +429,6 @@ _setup_appdir () {
   then
     chown -R ${USRNAME}:${USRNAME} ${ENERGI_HOME}
   fi
-  
 }
 
 _set_ismainnet () {
@@ -448,7 +443,6 @@ _set_ismainnet () {
       export CONF_DIR=${USRHOME}/.energicore3
       export FWPORT=39797
       export APPARG=''
-      export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.energi.network/"
       echo "Core Node will be setup for Mainnet"
     else
@@ -456,7 +450,6 @@ _set_ismainnet () {
       export FWPORT=49797
       export APPARG='--testnet'
       export isMainnet="n"
-      export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/testnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.test.energi.network/"
       echo "Core Node will be setup for Testnet"
     fi
@@ -469,17 +462,14 @@ _set_ismainnet () {
       export FWPORT=49797
       export APPARG='--testnet'
       export isMainnet="n"
-      export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/testnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.test.energi.network/"
       echo "Core Node will be setup for Testnet"
       
     else
       export CONF_DIR=${USRHOME}/.energicore3
       export FWPORT=39797
-      export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.energi.network/"
-      echo "Core Node will be setup for Mainnet"
-      
+      echo "Core Node will be setup for Mainnet"     
     fi
 
   fi
@@ -538,17 +528,13 @@ UBUNTU_SECURITY_PACKAGES
       util-linux \
       gzip \
       unzip \
-      unrar \
-      xz-utils \
       procps \
       htop \
-      git \
       gpw \
       bc \
       pv \
       sysstat \
       glances \
-      psmisc \
       at \
       subnetcalc \
       net-tools \
@@ -573,7 +559,6 @@ UBUNTU_SECURITY_PACKAGES
   
   echo "    Removing apt files not required"
   ${SUDO} apt autoremove -y 2> /dev/null
-  
 }
 
 _add_logrotate () {
@@ -741,7 +726,6 @@ _install_energi () {
   
   # Change to install directory
   cd
-  
 }
 
 _upgrade_energi () {
@@ -755,45 +739,10 @@ _upgrade_energi () {
     # Extract latest version number without the 'v'
     GIT_VERSION_NUM=$( echo ${GIT_VERSION} | sed 's/v//g' )
   fi
-  
-  # Check if v3.1+ is available on Github
-  #if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
 
-    # Rename energi3 if 3.1.x and above is released
-    #if [[ -d ${USRHOME}/energi3 ]]
-    #then
-    #        
-    #  export ENERGI_EXE=energi
-    #  export ENERGI_HOME="${USRHOME}/${ENERGI_EXE}"
-    #  
-    #  mv ${USRHOME}/energi3/bin/energi3 ${USRHOME}/energi3/bin/energi
-    #  mv ${USRHOME}/energi3 ${USRHOME}/energi
-    #  if [[ -f /etc/logrotate.d/energi3 ]]
-    #  then
-    #    ${SUDO} rm /etc/logrotate.d/energi3
-    #  fi
-    #  
-    #  if [[ -f /lib/systemd/system/energi3.service ]]
-    #  then
-    #    ${SUDO} systemctl disable energi3.service
-    #    ${SUDO} rm /lib/systemd/system/energi3.service
-    #  fi
-    #  
-    #  # Update PATH variable for Energi
-    #  CHKBASHRC=`grep "Energi3 PATH" "${USRHOME}/.bashrc"`
-    #  if [ ! -z "${CHKBASHRC}" ]
-    #  then
-    #    sed -i 's/Energi3/Energi/g' "${USRHOME}/.bashrc"
-    #    sed -i 's/energi3/energi/g' "${USRHOME}/.bashrc"
-    #    source ${USRHOME}/.bashrc
-    #  fi
-    #fi
-    
-  #else
+  # Variables
   ENERGI_EXE=energi3
   ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
-    
-  #fi 
   
   # Set PATH to energi
   export BIN_DIR=${ENERGI_HOME}/bin
@@ -835,7 +784,6 @@ _upgrade_energi () {
     sleep ${WAIT_EXEC}
     
   fi
-
 }
 
 _restrict_logins() {
@@ -910,7 +858,6 @@ _restrict_logins() {
     echo "List of users that can login via SSH (/etc/ssh/sshd_config):"
     echo ${USRS_THAT_CAN_LOGIN}
   fi
-  
 }
 
 _secure_host() {
@@ -932,7 +879,6 @@ _secure_host() {
   fi
   ${SUDO} ufw logging on
   ${SUDO} ufw --force enable
-  
 }
 
 _remove_two_factor() {
@@ -949,7 +895,6 @@ _remove_two_factor() {
       fi
       echo "2FA has been removed for user ${USRNAME}!"
   fi
-  
 }
 
 _setup_two_factor() {
@@ -1146,7 +1091,6 @@ _setup_two_factor() {
   else
     rm -f "${USRHOME}/.google_authenticator"
   fi
-
 }
 
 _add_rsa_key() {
@@ -1280,24 +1224,6 @@ _copy_keystore() {
     echo
     
   done
-
-}
-
-_download_bootstrap () {
-  
-  # Download latest bootstrap and extract it
-  echo "Downloading latest bootstrap..."
-  sleep 5
-  cd ${USRHOME}
-  curl -s ${BOOTSTRAP_URL} | tar xvz
-
-  # Change ownership if downloaded as root
-  if [[ ${EUID} = 0 ]]
-  then
-    echo "  Changing ownership to ${USRNAME}"
-    chown -R "${USRNAME}":"${USRNAME}" ${USRHOME}/.energicore3
-  fi
-
 }
 
 _start_energi () {
@@ -1330,7 +1256,6 @@ _start_energi () {
       echo "energi service is running..."
     fi  
   fi
-
 }
 
 _stop_energi () {
@@ -1363,7 +1288,6 @@ _stop_energi () {
       echo "energi3 service is not running..."
     fi
   fi
-
 }
 
 _get_enode () {
@@ -1398,7 +1322,6 @@ _get_enode () {
   
   # Add space
   echo
-
 }
 
 _stop_nodemon () {
@@ -1413,7 +1336,6 @@ _stop_nodemon () {
     ${SUDO} systemctl stop nodemon.timer
 
   fi
-
 }
 
 _start_nodemon () {
@@ -1426,7 +1348,6 @@ _start_nodemon () {
     ${SUDO} systemctl start nodemon.timer
 
   fi
-
 }
 
 _ascii_logo () {
@@ -1648,7 +1569,6 @@ echo
 # Make installer interactive and select normal mode by default.
 isMainnet="y"
 INTERACTIVE="y"
-BOOTSTRAP="n"
 POSITIONAL=()
 
 # Check if v3.1+ is available on Github
@@ -1667,29 +1587,6 @@ do
   shift
 
   case $key in
-    -b|--bootstrap)
-        clear 2> /dev/null
-        if [[ EUID = 0 ]]
-        then
-          echo "Cannot run as root.  Exiting script."
-          echo
-          exit 10
-        fi
-        _check_install
-        _set_ismainnet
-        _stop_nodemon
-        sleep ${WAIT_EXEC}
-        _stop_energi
-        sleep ${WAIT_EXEC}
-        ${ENERGI_EXE} ${APPARG} removedb
-        sleep ${WAIT_EXEC}
-        _download_bootstrap
-        sleep ${WAIT_EXEC}
-        _start_energi
-        sleep ${WAIT_EXEC}
-        _start_nodemon
-        exit 0
-        ;;
     -t|--testnet|-testnet)
         isMainnet="n"
         ;;
@@ -1740,7 +1637,6 @@ do
 Syntax: energi-linux-installer.sh ['' arguments]
 
 arguments (optional):
-    -b  --bootstrap           : Sync node using Bootstrap
     -t  --testnet             : Setup testnet
     -r  --rsa                 : Setup token based login
     -f  --2fa                 : Setup 2-Factor Authentication
@@ -1758,7 +1654,6 @@ HELPMSG
         ;;
   esac
 done
-
 
 #
 # Clears screen and present Energi logo
@@ -1834,7 +1729,6 @@ case ${INSTALLTYPE} in
         fi
 
         _install_energi
-        _download_bootstrap
         
         # Check if user wants to copy keystore file to VPS
         clear 2> /dev/null
@@ -1933,16 +1827,7 @@ case ${INSTALLTYPE} in
             then
               echo "${GREEN}Vesion ${L} requires a reset of chaindata${NC}"
               ${BIN_DIR}/${ENERGI_EXE} removedb
-              _download_bootstrap
               break
-              
-            elif [[ -f "${CONF_DIR}/energi3/chaindata/CURRENT" ]] && [[ ${BOOTSTRAP} = y ]]
-            then
-              echo "Removing chaindata..."
-              rm -rf ${CONF_DIR}/energi3/chaindata/*
-              _download_bootstrap
-            fi
-          done
         fi
         
         _add_logrotate
@@ -1992,3 +1877,4 @@ _get_enode
 
 # End of Script
 ##
+
