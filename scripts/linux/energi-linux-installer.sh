@@ -1828,6 +1828,8 @@ case ${INSTALLTYPE} in
               echo "${GREEN}Vesion ${L} requires a reset of chaindata${NC}"
               ${BIN_DIR}/${ENERGI_EXE} removedb
               break
+            fi
+          done
         fi
         
         _add_logrotate
