@@ -237,6 +237,7 @@ case ${OPTION} in
           sudo sed -i 's/--miner.autocollateralize 1/--miner.autocompounding 0/' ${SERVICEFILE}
           sudo sed -i 's/--miner.autocompounding 1/--miner.autocompounding 0/' ${SERVICEFILE}
           sudo systemctl daemon-reload
+          sudo systemctl restart energi3.service
           echo
           #_cmd-collOff
           _post_message
@@ -251,6 +252,7 @@ case ${OPTION} in
           fi
           sudo sed -i 's/node/node --miner.autocompounding 0/' ${SERVICEFILE}
           sudo systemctl daemon-reload
+          sudo systemctl restart energi3.service
           echo
           #_cmd-collOff
           _post_message
