@@ -10,6 +10,7 @@
 # Version:
 #   0.0.1  20200929 DT Initial Script
 #   1.0.0  20201012 ZA Added echo to provide information of what is being cleaned
+#   1.0.1  20220101 ZA Rotate log files before clean-up
 : '
 # Run the script to get started:
 ```
@@ -17,6 +18,10 @@ curl -s https://raw.githubusercontent.com/energicryptocurrency/energi3-provision
 ```
 '
 ######################################################################
+
+# Rotate all log files
+echo "Rotating log files..."
+sudo logrotate -f /etc/logrotate.conf
 
 # Removes logs ending in .gz and .1 in /var/log
 echo "Cleaning /var/log directory..."
