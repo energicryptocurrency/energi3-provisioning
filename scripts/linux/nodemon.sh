@@ -25,10 +25,10 @@
 #   1.2.1  20201015  ZAlam Updated MN Reward time calculation
 #   1.3.0  20210208  ZAlam Update USRNAME & DATADIR; support all versions
 #   1.3.1  20211208  ZAlam Energi Core Node repo change
-#   1.3.4  20210101  ZAlam Exclude TTY executions & use correct ${ENERGI_EXEC} binary
+#   1.3.5  20210101  ZAlam Exclude TTY executions & use correct ${ENERGI_EXEC} binary
 #
 # Set script version
-NODEMONVER=1.3.4
+NODEMONVER=1.3.5
 
  : '
 # Run this file
@@ -1427,7 +1427,7 @@ ${MESSAGE}"
     then
       SQL_QUERY "REPLACE INTO variables (key,value) VALUES ('last_login_time_check','${UNIX_TIME}');"
     fi
-  done <<< "$( grep 'port' /var/log/auth.log | grep -iv 'CRON\|TTY\|preauth\|Invalid[[:space:]]user\|user[[:space:]]unknown\|major[[:space:]]versions[[:space:]]differ\|Failed[[:space:]]password\|authentication[[:space:]]failure\|refused[[:space:]]connect\|ignoring[[:space:]]max\|not[[:space:]]receive[[:space:]]identification\|[[:space:]]sudo\|[[:space:]]su\|Bad[[:space:]]protocol\|Disconnected[[:space:]]from[[:space:]]user\|Failed[[:space:]]none' )"
+  done <<< "$( grep 'port' /var/log/auth.log | grep -iv 'CRON\|TTY\|preauth\|Invalid[[:space:]]user\|user[[:space:]]unknown\|major[[:space:]]versions[[:space:]]differ\|Failed[[:space:]]password\|authentication[[:space:]]failure\|refused[[:space:]]connect\|ignoring[[:space:]]max\|not[[:space:]]receive[[:space:]]identification\|[[:space:]]sudo\|[[:space:]]su\|Bad[[:space:]]protocol\|Disconnected[[:space:]]from[[:space:]]user\|disconnected[[:space:]]on[[:space:]]user\|Failed[[:space:]]none' | tail -1 )"
 }
 
  CHECK_DISK () {
