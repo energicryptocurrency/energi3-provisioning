@@ -25,10 +25,10 @@
 #   1.2.1  20201015  ZAlam Updated MN Reward time calculation
 #   1.3.0  20210208  ZAlam Update USRNAME & DATADIR; support all versions
 #   1.3.1  20211208  ZAlam Energi Core Node repo change
-#   1.3.3  20210101  ZAlam Exclude TTY executions & use correct ${ENERGI_EXEC} binary
+#   1.3.4  20210101  ZAlam Exclude TTY executions & use correct ${ENERGI_EXEC} binary
 #
 # Set script version
-NODEMONVER=1.3.3
+NODEMONVER=1.3.4
 
  : '
 # Run this file
