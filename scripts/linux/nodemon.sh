@@ -161,11 +161,11 @@ NODEMONVER=1.3.3
  # Check if testnet
  if [[ ${ARG} == '--testnet' ]]
  then
-   NODEAPICOMMAND="${ENERGI_EXEC} attach https://nodeapi.energi.network --exec "
-   NRGAPI="https://explorer.energi.network/api"
- else
    NODEAPICOMMAND="${ENERGI_EXEC} attach https://nodeapi.test.energi.network --exec "
    NRGAPI="https://explorer.test.energi.network/api"
+ else
+   NODEAPICOMMAND="${ENERGI_EXEC} attach https://nodeapi.energi.network --exec "
+   NRGAPI="https://explorer.energi.network/api"
  fi
  
  # version arg.
