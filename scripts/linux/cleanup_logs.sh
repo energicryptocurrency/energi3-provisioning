@@ -21,6 +21,10 @@ curl -s https://raw.githubusercontent.com/energicryptocurrency/energi3-provision
 
 # Rotate all log files
 echo "Rotating log files..."
+if [[ -f /home/nrgstaker/log/nodemon.log ]]
+then
+    sudo chmod 644 /home/nrgstaker/log/nodemon.log
+fi
 sudo logrotate -f /etc/logrotate.conf
 
 # Removes logs ending in .gz and .1 in /var/log
