@@ -25,10 +25,10 @@
 #   1.2.1  20201015  ZAlam Updated MN Reward time calculation
 #   1.3.0  20210208  ZAlam Update USRNAME & DATADIR; support all versions
 #   1.3.1  20211208  ZAlam Energi Core Node repo change
-#   1.3.2  20210101  ZAlam Exclude TTY executions
+#   1.3.3  20210101  ZAlam Exclude TTY executions & use correct ${ENERGI_EXEC} binary
 #
 # Set script version
-NODEMONVER=1.3.2
+NODEMONVER=1.3.3
 
  : '
 # Run this file
@@ -410,18 +410,18 @@ fi
  then
   SQL_QUERY "INSERT OR IGNORE INTO variables values ( 'last_block_checked', '${CURRENTBLKNUM}' );"
  else
-  echo "energi is not running.  Exiting nodemon."
+  echo "${ENERGI_EXEC} is not running.  Exiting nodemon."
   exit 0
  fi
 
  # Daemon_bin_name URL_to_logo Bot_name
  DAEMON_BIN_LUT="
-energi https://s2.coinmarketcap.com/static/img/coins/128x128/3218.png Energi Monitor
+${ENERGI_EXEC} https://s2.coinmarketcap.com/static/img/coins/128x128/3218.png Energi Monitor
 "
 
  # Daemon_bin_name minimum_balance_to_stake staking_reward mn_reward_factor confirmations cooloff_seconds networkhashps_multiplier ticker_name blocktime_seconds
  DAEMON_BALANCE_LUT="
-energi 1 2.28 0.914 101 3600 0.000001 NRG 60
+${ENERGI_EXEC} 1 2.28 0.914 101 3600 0.000001 NRG 60
 "
 
  # Add timestamp to Log
@@ -525,10 +525,10 @@ SUDO_CONF
   cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nodemon.service >/dev/null
 [Unit]
 Description=Core Node Monitor
-After=syslog.target network.target energi.service
+After=syslog.target network.target ${ENERGI_EXEC}.service
 
 [Service]
-SyslogIdentifier=cftimer-energi-node-monitor
+SyslogIdentifier=cftimer-${ENERGI_EXEC}-node-monitor
 Type=oneshot
 Restart=no
 RestartSec=5
@@ -543,7 +543,7 @@ SYSTEMD_CONF
 [Unit]
 Description=Run Core Node Monitor Every 10 Minute
 Requires=nodemon.service
-After=energi.service
+After=${ENERGI_EXEC}.service
 
 [Timer]
 Unit=nodemon.service
@@ -2431,7 +2431,7 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
   fi
 
   # Get the version number.
-  VERSION=$( energi version  2>/dev/null | grep "^Version:" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' )
+  VERSION=$( ${ENERGI_EXEC} version  2>/dev/null | grep "^Version:" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' )
   if [[ -z "${VERSION}" ]]
   then
     VERSION=$( ${COMMAND} "admin.nodeInfo.name" 2>/dev/null | awk -F\/ '{print $2}' | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' )
@@ -2499,7 +2499,7 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
 
   # Get daemon bin name and pid from lock in toml folder.
   CONF_FOLDER=$( dirname "${CONF_LOCATION}" )
-  DAEMON_BIN=energi
+  DAEMON_BIN=${ENERGI_EXEC}
   CONTROLLER_BIN="${DAEMON_BIN}"
   DAEMON_PID=$( ps -ef | grep energi | grep -v "grep energi" | grep -v "grep --color=auto energi" | grep -v "attach" | awk '{print $2}' )
 
@@ -2552,7 +2552,7 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
 
   if [[ -z ${DAEMON_BIN} ]]
   then
-    DAEMON_BIN="energi"
+    DAEMON_BIN="${ENERGI_EXEC}"
   fi
 
   echo
