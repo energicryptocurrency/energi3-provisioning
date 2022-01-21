@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #######################################################################
-# Copyright (c) 2020
+# Copyright (c) 2022
 # All rights reserved.
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 #
@@ -14,17 +14,36 @@
 #
 # Version:
 #   1.0.0  20200421  ZAlam Initial Script
+#   1.1.0  20210114  ZAlam Updated to support all version
+#   1.1.1  20220121  ZAlam Bug fix with current month
 #
 # Set script version
-NODERPTVER=1.0.0
+NODERPTVER=1.1.0
 
 #set -x
 
-#
-USRNAME=$( find /home -name nodekey  2>&1 | grep -v "Permission denied" | awk -F\/ '{print $3}' )
+# get username; exclude testnet
+USRNAME=$( find /home -name nodekey  2>&1 | grep -v "Permission denied" | grep -v testnet | awk -F\/ '{print $3}' )
 
-#
-export PATH=$PATH:/home/${USRNAME}/energi3/bin
+# check for energi
+BINLOC=$( find /home/${USRNAME} -type f -name energi -executable 2>&1 | grep -v "Permission denied" )
+COMMAND="energi attach --exec "
+
+# check for energi3 if energi not installed
+if [ ! -z ${BINLOC} ]
+then
+  echo "Using binary name: energi"
+else
+  BINLOC=$( find /home/${USRNAME} -type f -name energi3 -executable 2>&1 | grep -v "Permission denied" )
+  COMMAND="energi3 attach --exec "
+  echo "Using binary name: energi3"
+fi
+
+# Extract path to binary
+EXECPATH=$( dirname ${BINLOC} )
+
+# set PATH
+export PATH=$PATH:${EXECPATH}
 
 # Report file
 RPTTMPFILE="/home/${USRNAME}/etc/reward_data.tmp"
@@ -82,6 +101,8 @@ fi
 case ${REPLY} in
 
   a)
+    
+    # Export all data
     SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'M',mnAddress,balance,Reward,nrgPrice FROM mn_rewards;" > ${RPTTMPFILE}
 
     SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'S',stakeAddress,balance,Reward,nrgPrice FROM stake_rewards;" >> ${RPTTMPFILE}
@@ -90,6 +111,7 @@ case ${REPLY} in
 
   b)
   
+    # Export previous month
     CURRMON=$( date +%Y-%m )
     PREVMON=$( date -d "$CURRMON-15 last month" '+%Y-%m' )
     PREVMON2=$( date -d "$CURRMON-15 last month" '+%m %Y' )
@@ -103,8 +125,10 @@ case ${REPLY} in
 
   c)
   
+    # Export current month
     CURRMON=$( date +%Y-%m )
-    LASTDAY=$( cal ${CURRMON} | awk 'NF {DAYS = $NF}; END {print DAYS}' )
+    CURRMON2=$( date '+%m %Y' )
+    LASTDAY=$( cal ${CURRMON2} | awk 'NF {DAYS = $NF}; END {print DAYS}' )
     
     SQL_REPORT "SELECT DATETIME(rewardTime,'unixepoch'),blockNum,'M',mnAddress,balance,Reward,nrgPrice FROM mn_rewards WHERE rewardTime >= strftime('%s','${CURRMON}-01 00:00:00') and rewardTime <= strftime('%s','${CURRMON}-${LASTDAY} 23:59:59');" > ${RPTTMPFILE}
     
@@ -114,6 +138,7 @@ case ${REPLY} in
 
   d)
     
+    # Custom date range
     echo "Enter date range of report..."
     read -p "Start date [YYYY-MM-DD]: " STARTDATE
     read -p "End date [YYYY-MM-DD]  : " ENDDATE
@@ -152,5 +177,3 @@ echo
 echo "The report has been saved to:"
 echo "   ${RPTFILE}"
 echo
-
-
