@@ -692,7 +692,7 @@ _install_energi () {
   # Copy latest energi and cleanup
   if [[ -x "${BIN_DIR}/${ENERGI_EXE}" ]]
   then
-    mv ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}/bin/${ENERGI_EXE} ${BIN_DIR}/.
+    mv ${ENERGI_EXE}-${GIT_VERSION_TAG}-linux-${OSARCH}/bin/${ENERGI_EXE} ${BIN_DIR}/.
     rm -rf ${ENERGI_EXE}-${GIT_VERSION_TAG}-linux-${OSARCH}
   else
     mv ${ENERGI_EXE}-${GIT_VERSION_TAG}-linux-${OSARCH} ${ENERGI_EXE}
