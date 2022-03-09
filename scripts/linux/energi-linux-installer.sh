@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ######################################################################
-# Copyright (c) 2021
+# Copyright (c) 2022
 # All rights reserved.
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 #
@@ -26,6 +26,7 @@
 #   1.3.10 20210817  ZA Update for v3.1.0; no change in binary name
 #   1.3.11 20211220  ZA Core Node repo change
 #   1.3.12 20211222  ZA Remove bootstrap
+#   1.3.13 20220309  ZA Update download URL
 #
 : '
 # Run the script to get started:
@@ -148,7 +149,6 @@ _os_arch () {
     echo
     exit 0
   fi
-  
 }
 
 _check_runas () {
@@ -679,25 +679,25 @@ _install_energi () {
   fi
   
   # Download from repositogy
-  echo "Downloading Energi Core Node v${GIT_VERSION_NUM} and scripts"
+  echo "Downloading Energi Core Node v${GIT_VERSION_TAG} and scripts"
   
   cd ${USRHOME}
   # Download energi from Amazon S3
-  wget -4qo- "${S3URL}/${GIT_VERSION_NUM}/${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz" --show-progress --progress=bar:force:noscroll 2>&1
+  wget -4qo- "${S3URL}/${GIT_VERSION_TAG}/${ENERGI_EXE}-${GIT_VERSION_TAG}-linux-${OSARCH}.tgz" --show-progress --progress=bar:force:noscroll 2>&1
   sleep ${WAIT_EXEC}
   
-  tar xvfz ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz
+  tar xvfz ${ENERGI_EXE}-${GIT_VERSION_TAG}-linux-${OSARCH}.tgz
   sleep ${WAIT_EXEC}
   
   # Copy latest energi and cleanup
   if [[ -x "${BIN_DIR}/${ENERGI_EXE}" ]]
   then
     mv ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}/bin/${ENERGI_EXE} ${BIN_DIR}/.
-    rm -rf ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}
+    rm -rf ${ENERGI_EXE}-${GIT_VERSION_TAG}-linux-${OSARCH}
   else
-    mv ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH} ${ENERGI_EXE}
+    mv ${ENERGI_EXE}-${GIT_VERSION_TAG}-linux-${OSARCH} ${ENERGI_EXE}
   fi
-  rm ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz
+  rm ${ENERGI_EXE}-${GIT_VERSION_TAG}-linux-${OSARCH}.tgz
   
   # Check if software downloaded
   if [ ! -d ${BIN_DIR} ]
@@ -1878,4 +1878,3 @@ _get_enode
 
 # End of Script
 ##
-
