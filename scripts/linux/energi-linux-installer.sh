@@ -27,6 +27,7 @@
 #   1.3.11 20211220  ZA Core Node repo change
 #   1.3.12 20211222  ZA Remove bootstrap
 #   1.3.13 20220309  ZA Update download URL
+#   1.3.14 20220525  ZA Check if GIT_VERSION_TAG is null
 #
 : '
 # Run the script to get started:
@@ -678,14 +679,15 @@ _install_energi () {
     #fi
   fi
   
-  # Download from repositogy
-  echo "Downloading Energi Core Node ${GIT_VERSION_TAG} and scripts"
-  
-  # Temp work around
+  # Check if null
   if [ -z "${GIT_VERSION_TAG}" ]
   then
-    GIT_VERSION_TAG=v3.1.3
+    GITHUB_LATEST=$( curl -s ${API_URL} )
+    GIT_VERSION_TAG=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
   fi
+  
+  # Download from repositogy
+  echo "Downloading Energi Core Node ${GIT_VERSION_TAG} and scripts"
   
   cd ${USRHOME}
   # Download energi from Amazon S3
