@@ -66,7 +66,7 @@ export BASE_URL=${BASE_URL:-"raw.githubusercontent.com/energicryptocurrency/ener
 #BASE_URL="raw.githubusercontent.com/zalam003/EnergiCore3/master/production/scripts"
 SCRIPT_URL="${BASE_URL}/linux"
 TP_URL="${BASE_URL}/thirdparty"
-DOC_URL="https://support.energi.world/"
+DOC_URL="https://wiki.energi.world/"
 export S3URL=${S3URL:-"https://s3-us-west-2.amazonaws.com/download.energi.software/releases/energi3"}
 
 # Externalize NODE_MAX_PEERS
@@ -679,7 +679,13 @@ _install_energi () {
   fi
   
   # Download from repositogy
-  echo "Downloading Energi Core Node v${GIT_VERSION_TAG} and scripts"
+  echo "Downloading Energi Core Node ${GIT_VERSION_TAG} and scripts"
+  
+  # Temp work around
+  if [ -z "${GIT_VERSION_TAG}" ]
+  then
+    GIT_VERSION_TAG=v3.1.3
+  fi
   
   cd ${USRHOME}
   # Download energi from Amazon S3
