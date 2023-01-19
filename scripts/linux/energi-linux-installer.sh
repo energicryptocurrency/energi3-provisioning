@@ -28,6 +28,7 @@
 #   1.3.12 20211222  ZA Remove bootstrap
 #   1.3.13 20220309  ZA Update download URL
 #   1.3.14 20220525  ZA Check if GIT_VERSION_TAG is null
+#   1.4.0  20230119  ZA Update script to support new version on GITHUB TAG
 #
 : '
 # Run the script to get started:
@@ -109,10 +110,19 @@ _os_arch () {
   OSVERSIONLONG=`grep ^VERSION_ID /etc/os-release | awk -F\" '{ print $2 }'`
   OSVERSION=`echo ${OSVERSIONLONG} | awk -F\. '{ print $1 }'`
   echo -n "${OSNAME} ${OSVERSIONLONG} is  "
-  if [ "${OSNAME}" = "Ubuntu" ] && [ ${OSVERSION} -ge 18 ]
+  if [ "${OSNAME}" = "Ubuntu" ] && [ ${OSVERSION} -ge 20 ]
   then
     echo "${GREEN}supported${NC}"
+  elif [ "${OSNAME}" = "Ubuntu" ] && [ ${OSVERSION} -lt 20 ]
+  then
+    echo "${RED}not supported${NC}"
+    echo "${RED}Upgrade to Ubuntu 20.04 or higher${NC}"
+    echo "${RED}Upgrade Guide: https://wiki.energi.world/en/3-1/how-to/upgrade-ubuntu-18-to-20${NC}"
+    exit 0
   elif [ "${OSNAME}" = "Raspbian GNU/Linux" ]
+  then
+    echo "${GREEN}supported${NC}"
+  elif [ "${OSNAME}" = "Debian GNU/Linux" ] && [ ${OSVERSION} -ge 11 ]
   then
     echo "${GREEN}supported${NC}"
   else
@@ -764,6 +774,21 @@ _upgrade_energi () {
     echo "${RED}Exiting installer.${NC}"
     exit 10
   
+  fi
+
+  # Change INSTALL_VERSION with new .tag_name convension 2023-01-19
+  if [[ ${INSTALL_VERSION} == "3.1.0" ]]
+  then
+    INSTALL_VERSION="1.1.0"
+  elif [[ ${INSTALL_VERSION} == "3.1.1" ]]
+  then
+    INSTALL_VERSION="1.1.1"
+  elif [[ ${INSTALL_VERSION} == "3.1.2" ]]
+  then
+    INSTALL_VERSION="1.1.2"
+  elif [[ ${INSTALL_VERSION} == "3.1.3" ]]
+  then
+    INSTALL_VERSION="1.1.3"
   fi
   
   # Check if the version in Github requires removedb
