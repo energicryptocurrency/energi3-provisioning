@@ -28,6 +28,7 @@
 #   1.3.12 20211222  ZA Remove bootstrap
 #   1.3.13 20220309  ZA Update download URL
 #   1.3.14 20220525  ZA Check if GIT_VERSION_TAG is null
+#   1.3.15 20230710  ZA Fix systemctl enable energi3
 #
 : '
 # Run the script to get started:
@@ -648,7 +649,7 @@ SYSTEMD_CONF
       ${SUDO} chown -R ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
     fi
     echo "    Enabling energi service"
-    ${SUDO} systemctl enable energi
+    ${SUDO} systemctl enable ${ENERGI_EXE}
 
   fi
 }
