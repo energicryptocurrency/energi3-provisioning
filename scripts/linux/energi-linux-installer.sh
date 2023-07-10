@@ -72,7 +72,7 @@ DOC_URL="https://wiki.energi.world/"
 export S3URL=${S3URL:-"https://s3-us-west-2.amazonaws.com/download.energi.software/releases/energi3"}
 
 # Externalize NODE_MAX_PEERS
-export NODE_MAX_PEERS=${NODE_MAX_PEERS:-128}
+export NODE_MAX_PEERS=${NODE_MAX_PEERS:-32}
 
 # Set Executables & Configuration
 export ENERGI_CONF=energi.toml
