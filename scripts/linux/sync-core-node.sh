@@ -27,33 +27,32 @@ YELLOW=`tput setaf 2`
 NC=`tput sgr0`
 
 # Who is running the script
-# If root no sudo required
-# If user has sudo privilidges, run sudo when necessary
+# If root no ${SUDO} required
+# If user has ${SUDO} privilidges, run ${SUDO} when necessary
 
-# RUNAS=`whoami`
+RUNAS=`whoami`
 
-# if [[ $EUID = 0 ]]
-# then
-#     SUDO=""
-# else
-#     ISSUDOER=`getent group sudo | grep ${RUNAS}`
-#     if [ ! -z "${ISSUDOER}" ]
-#     then
-#         SUDO='sudo'
-#     else
-#         echo "User ${RUNAS} does not have sudo permissions."
-#         echo "Run ${BLUE}sudo ls -l${NC} to set permissions if you know the user ${RUNAS} has sudo previlidges"
-#         echo "and then rerun the script"
-#         echo "Exiting script..."
-#         sleep 3
-#         exit 0
-#     fi
-# fi
+if [[ $EUID = 0 ]]
+then
+  SUDO=""
+else
+  ISSUDOER=`getent group ${SUDO} | grep ${RUNAS}`
+  if [ ! -z "${ISSUDOER}" ]
+  then
+    SUDO='${SUDO}'
+  else
+    echo "User ${RUNAS} does not have ${SUDO} permissions."
+    echo "Run ${BLUE}${SUDO} ls -l${NC} to set permissions if you know the user ${RUNAS} has ${SUDO} previlidges"
+    echo "and then rerun the script"
+    echo "Exiting script..."
+    sleep 3
+    exit 0
+  fi
+fi
 
 #
-echo "Stopping Energi Core Node and nodemon"
-sudo systemctl stop nodemon.timer
-sudo systemctl stop energi3
+echo "Stopping Energi Core Node"
+${SUDO} systemctl stop energi3
 sleep 5
 
 # Remove old chaindata
@@ -95,13 +94,12 @@ then
 fi
 
 # Set ownership to .energicore3 directory
-sudo chown -R nrgstaker:nrgstaker .energicore3
+${SUDO} chown -R nrgstaker:nrgstaker .energicore3
 
-# 
-echo "Starting Energi Core Node and nodemon"
-sudo systemctl start energi3
+# Start Energi Core Node
+echo "Starting Energi Core Node"
+${SUDO} systemctl start energi3
 sleep 5
-sudo systemctl start nodemon.timer
 
 # remove temporary files
-sudo rm chaindata-files.txt sha256sums.txt
+${SUDO} rm chaindata-files.txt sha256sums.txt
