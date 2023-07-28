@@ -39,7 +39,7 @@ else
   ISSUDOER=`getent group ${SUDO} | grep ${RUNAS}`
   if [ ! -z "${ISSUDOER}" ]
   then
-    SUDO='${SUDO}'
+    SUDO='sudo'
   else
     echo "User ${RUNAS} does not have ${SUDO} permissions."
     echo "Run ${BLUE}${SUDO} ls -l${NC} to set permissions if you know the user ${RUNAS} has ${SUDO} previlidges"
@@ -50,10 +50,16 @@ else
   fi
 fi
 
-#
-echo "Stopping Energi Core Node"
-${SUDO} systemctl stop energi3
-sleep 5
+
+SYSTEMCTLSTATUS=`systemctl status energi.service | grep "Active:" | awk '{print $2}'`
+if [[ "${SYSTEMCTLSTATUS}" = "active" ]]
+then
+  echo "Stopping Energi Core Node..."
+  ${SUDO} systemctl stop energi.service
+  sleep 5
+else
+  echo "energi service is not running..."
+fi
 
 # Remove old chaindata
 if [ -d /home/nrgstaker/.energicore3/energi3/chaindata ]
