@@ -78,7 +78,10 @@ if [ ! -f chaindata-files.txt ]
 then
   wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/chaindata-files.txt --show-progress --progress=bar:force:noscroll 2>&1
 fi
-wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/sha256sums.txt --show-progress --progress=bar:force:noscroll 2>&1
+if [ ! -f sha256sums.txt ]
+then
+  wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/sha256sums.txt --show-progress --progress=bar:force:noscroll 2>&1
+fi
 
 # Check list of files to download exists
 if [ ! -f chaindata-files.txt ]
@@ -91,7 +94,7 @@ fi
 # Download and extract chaindata files
 for FILE in `cat chaindata-files.txt`
 do 
-  wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/$FILE --show-progress --progress=bar:force:noscroll 2>&1
+  wget -4qoc- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/$FILE --show-progress --progress=bar:force:noscroll 2>&1
   grep $FILE sha256sums.txt > SHA256SUMS
   CHECKFILE=$(sha256sum -c SHA256SUMS | grep OK)
   if [ ! -z $CHECKFILE ]
