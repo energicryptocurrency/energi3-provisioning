@@ -104,7 +104,10 @@ do
     sed -i '/'"${FILE}"'/d' chaindata-files.txt
   else
     echo "Error with file $FILE."
-    echo "Rerun the sync script again to start where it left off"
+    echo "${BLUE}Run the sync script again.${NC} It will start from where it left off."
+    echo
+    echo "${RED}DO NOT remove the chaindata${NC} already downloaded when prompted this time."
+    echo
     exit 20
   fi
 done
