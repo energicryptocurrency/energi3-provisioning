@@ -102,7 +102,7 @@ do
   else
     echo "Error with file $FILE."
     echo "Rerun the sync script again to start where it left off"
-    exit 10
+    exit 20
   fi
 done
 
