@@ -74,9 +74,13 @@ fi
 
 # Get list of files to download and their checksum
 cd /home/nrgstaker
-wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/chaindata-files.txt --show-progress --progress=bar:force:noscroll 2>&1
+if [ ! -f chaindata-files.txt ]
+then
+  wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/chaindata-files.txt --show-progress --progress=bar:force:noscroll 2>&1
+fi
 wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/sha256sums.txt --show-progress --progress=bar:force:noscroll 2>&1
 
+# Check list of files to download exists
 if [ ! -f chaindata-files.txt ]
 then
   echo "chaindata-files.txt was not download."
@@ -88,8 +92,18 @@ fi
 for FILE in `cat chaindata-files.txt`
 do 
   wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/$FILE --show-progress --progress=bar:force:noscroll 2>&1
-  tar xvfz $FILE
-  rm $FILE
+  grep $FILE sha256sums.txt > SHA256SUMS
+  CHECKFILE=$(sha256sum -c SHA256SUMS | grep OK)
+  if [ ! -z $CHECKFILE ]
+  then
+    tar xvfz $FILE
+    rm $FILE
+    sed -i '/'"${FILE}"'/d' chaindata-files.txt
+  else
+    echo "Error with file $FILE."
+    echo "Rerun the sync script again to start where it left off"
+    exit 10
+  fi
 done
 
 # create log dir if it does not exist
@@ -108,4 +122,4 @@ ${SUDO} systemctl start energi3
 sleep 5
 
 # remove temporary files
-${SUDO} rm chaindata-files.txt sha256sums.txt
+${SUDO} rm chaindata-files.txt sha256sums.txt SHA256SUMS
