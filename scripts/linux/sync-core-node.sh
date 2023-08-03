@@ -94,7 +94,7 @@ fi
 # Download and extract chaindata files
 for FILE in `cat chaindata-files.txt`
 do 
-  wget -4qoc- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/$FILE --show-progress --progress=bar:force:noscroll 2>&1
+  wget -c https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/$FILE --show-progress --progress=bar:force:noscroll 2>&1
   grep $FILE sha256sums.txt > SHA256SUMS
   CHECKFILE=$(sha256sum -c SHA256SUMS | grep OK)
   if [ ! -z $CHECKFILE ]
