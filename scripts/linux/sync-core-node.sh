@@ -104,8 +104,8 @@ do
   if [ ! -z "${CHECKFILE}" ]
   then
     echo "sha256sum matches. Extracting file"
-    sleep 5
-    tar xvfz $FILE
+    echo "Extracting file: $FILE"
+    tar xfz $FILE
     rm $FILE
     echo "Removing $FILE from list of files to download"
     sed -i '/'"${FILE}"'/d' chaindata-files.txt
