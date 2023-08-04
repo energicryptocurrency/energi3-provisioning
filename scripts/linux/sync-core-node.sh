@@ -93,14 +93,20 @@ fi
 
 # Download and extract chaindata files
 for FILE in `cat chaindata-files.txt`
-do 
+do
+  echo "Downloading $FILE..."
   wget -c https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/$FILE --show-progress --progress=bar:force:noscroll 2>&1
+  
+  # Verify sha256sum
   grep $FILE sha256sums.txt > SHA256SUMS
   CHECKFILE=$(sha256sum -c SHA256SUMS | grep OK)
   if [ ! -z $CHECKFILE ]
   then
+    echo "sha256sum matches. Extracting file"
+    sleep 5
     tar xvfz $FILE
     rm $FILE
+    echo "Removing $FILE from list of files to download"
     sed -i '/'"${FILE}"'/d' chaindata-files.txt
   else
     echo "Error with file $FILE."
