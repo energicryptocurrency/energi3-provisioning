@@ -103,8 +103,7 @@ do
   sleep 5
   if [ ! -z "${CHECKFILE}" ]
   then
-    echo "sha256sum matches. Extracting file"
-    echo "Extracting file: $FILE"
+    echo "sha256sum matches. Extracting file $FILE"
     tar xfz $FILE
     rm $FILE
     echo "Removing $FILE from list of files to download"
