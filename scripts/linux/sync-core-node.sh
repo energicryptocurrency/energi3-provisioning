@@ -74,9 +74,16 @@ fi
 
 # Get list of files to download and their checksum
 cd /home/nrgstaker
-wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/chaindata-files.txt --show-progress --progress=bar:force:noscroll 2>&1
-wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/sha256sums.txt --show-progress --progress=bar:force:noscroll 2>&1
+if [ ! -f chaindata-files.txt ]
+then
+  wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/chaindata-files.txt --show-progress --progress=bar:force:noscroll 2>&1
+fi
+if [ ! -f sha256sums.txt ]
+then
+  wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/sha256sums.txt --show-progress --progress=bar:force:noscroll 2>&1
+fi
 
+# Check list of files to download exists
 if [ ! -f chaindata-files.txt ]
 then
   echo "chaindata-files.txt was not download."
@@ -86,10 +93,30 @@ fi
 
 # Download and extract chaindata files
 for FILE in `cat chaindata-files.txt`
-do 
-  wget -4qo- https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/$FILE --show-progress --progress=bar:force:noscroll 2>&1
-  tar xvfz $FILE
-  rm $FILE
+do
+  echo "Downloading $FILE..."
+  wget -c https://eu2.contabostorage.com/679d4da708bc41d3b9f670d4eae73eb1:mainnet/$FILE --show-progress --progress=bar:force:noscroll 2>&1
+  
+  # Verify sha256sum
+  grep $FILE sha256sums.txt > SHA256SUMS
+  CHECKFILE=$(sha256sum -c SHA256SUMS | grep OK)
+  sleep 5
+  if [ ! -z $CHECKFILE ]
+  then
+    echo "sha256sum matches. Extracting file"
+    sleep 5
+    tar xvfz $FILE
+    rm $FILE
+    echo "Removing $FILE from list of files to download"
+    sed -i '/'"${FILE}"'/d' chaindata-files.txt
+  else
+    echo "Error with file $FILE."
+    echo "${BLUE}Run the sync script again.${NC} It will start from where it left off."
+    echo
+    echo "${RED}DO NOT remove the chaindata${NC} already downloaded when prompted this time."
+    echo
+    exit 20
+  fi
 done
 
 # create log dir if it does not exist
@@ -108,4 +135,4 @@ ${SUDO} systemctl start energi3
 sleep 5
 
 # remove temporary files
-${SUDO} rm chaindata-files.txt sha256sums.txt
+${SUDO} rm chaindata-files.txt sha256sums.txt SHA256SUMS
