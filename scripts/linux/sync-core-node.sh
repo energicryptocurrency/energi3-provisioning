@@ -101,7 +101,7 @@ do
   grep $FILE sha256sums.txt > SHA256SUMS
   CHECKFILE=$(sha256sum -c SHA256SUMS | grep OK)
   sleep 5
-  if [ ! -z $CHECKFILE ]
+  if [ ! -z "${CHECKFILE}" ]
   then
     echo "sha256sum matches. Extracting file"
     sleep 5
