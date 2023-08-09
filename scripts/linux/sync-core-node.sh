@@ -50,15 +50,25 @@ else
   fi
 fi
 
+# Stop nodemon if running.
+NODEMONSTATUS=$(systemctl status nodemon.timer | grep "Active:" | awk '{print $2}')
+if [[ "${NODEMONSTATUS}" = "active" ]]
+then
+  echo "Stopping nodemon service for Energi"
+  ${SUDO} systemctl stop nodemon.timer
+  sleep 5
+fi
 
-SYSTEMCTLSTATUS=`systemctl status energi.service | grep "Active:" | awk '{print $2}'`
+# Stop energi core if running.
+SYSTEMCTLSTATUS=$(systemctl status energi3.service | grep "Active:" | awk '{print $2}')
 if [[ "${SYSTEMCTLSTATUS}" = "active" ]]
 then
-  echo "Stopping Energi Core Node..."
-  ${SUDO} systemctl stop energi.service
+  echo "Stopping Energi3 Core Node..."
+  ${SUDO} systemctl stop energi3.service
+  ${SUDO} systemctl disable energi3.service
   sleep 5
 else
-  echo "energi service is not running..."
+  echo "energi3 service is not running..."
 fi
 
 # Remove old chaindata
@@ -104,7 +114,7 @@ do
   CHECKFILE=$(sha256sum -c SHA256SUMS | grep OK)
   if [ ! -z "${CHECKFILE}" ]
   then
-    echo "sha256sum matches. Extracting file ${FILE}. It will some time to extract."
+    echo -e "sha256sum matches ${GREEN}☑${NC}. Extracting file ${FILE}. It will some time to extract."
     tar xfz $FILE
     rm $FILE
     echo "Removing $FILE from list of files to download"
@@ -132,8 +142,19 @@ ${SUDO} chown -R nrgstaker:nrgstaker .energicore3
 
 # Start Energi Core Node
 echo "Starting Energi Core Node"
-${SUDO} systemctl start energi3
+${SUDO} systemctl enable energi3.service
+${SUDO} systemctl start energi3.service
 sleep 5
+
+# If nodemon is installed, start it
+if [ -f /etc/systemd/system/nodemon.timer ]
+then
+  echo "Starting nodemon service for Energi"
+  ${SUDO} systemctl daemon-reload
+  ${SUDO} systemctl start nodemon.timer
+else
+  echo "nodemon is not installed."
+fi
 
 # remove temporary files
 echo "Removing temporary files"
