@@ -94,16 +94,17 @@ fi
 # Download and extract chaindata files
 for FILE in `cat chaindata-files.txt`
 do
-  echo "Downloading $FILE..."
+  echo "Downloading ${FILE}..."
+  sleep 5
   wget -c https://usc1.contabostorage.com/ab655ed609364bd6805208d309a046f8:mainnet/$FILE --show-progress --progress=bar:force:noscroll 2>&1
   
   # Verify sha256sum
+  echo "Checking validity of ${FILE}. The validation may take some time."
   grep $FILE sha256sums.txt > SHA256SUMS
   CHECKFILE=$(sha256sum -c SHA256SUMS | grep OK)
-  sleep 5
   if [ ! -z "${CHECKFILE}" ]
   then
-    echo "sha256sum matches. Extracting file $FILE"
+    echo "sha256sum matches. Extracting file ${FILE}. It will some time to extract."
     tar xfz $FILE
     rm $FILE
     echo "Removing $FILE from list of files to download"
@@ -126,6 +127,7 @@ then
 fi
 
 # Set ownership to .energicore3 directory
+echo "Changing ownership of files to nrgstaker"
 ${SUDO} chown -R nrgstaker:nrgstaker .energicore3
 
 # Start Energi Core Node
@@ -134,4 +136,5 @@ ${SUDO} systemctl start energi3
 sleep 5
 
 # remove temporary files
+echo "Removing temporary files"
 ${SUDO} rm chaindata-files.txt sha256sums.txt SHA256SUMS
