@@ -29,6 +29,7 @@
 #   1.3.13 20220309  ZA Update download URL
 #   1.3.14 20220525  ZA Check if GIT_VERSION_TAG is null
 #   1.3.15 20230710  ZA Fix systemctl enable energi3
+#   1.3.16 20230817  ZA Get IP4 Address
 #
 : '
 # Run the script to get started:
@@ -611,7 +612,7 @@ _add_systemd () {
         ${SUDO} chown -R ${USRNAME}:${USRNAME} ${CONF_DIR}
     fi
     sleep ${WAIT_EXEC}
-    EXTIP=`curl -s https://ifconfig.me/`
+    EXTIP=`curl -s -4 https://ifconfig.me/`
     cat << SYSTEMD_CONF | ${SUDO} tee /lib/systemd/system/${ENERGI_EXE}.service >/dev/null
 [Unit]
 Description=Energi Core Node Service
@@ -976,7 +977,7 @@ _setup_two_factor() {
   fi
 
   # Generate otp.
-  IP_ADDRESS=$( timeout --signal=SIGKILL 10s curl -s http://ipinfo.io/ip )
+  IP_ADDRESS=$( timeout --signal=SIGKILL 10s curl -s -4 http://ipinfo.io/ip )
   SECRET=''
   if [[ -f "${USRHOME}/.google_authenticator" ]]
   then
