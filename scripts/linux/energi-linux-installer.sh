@@ -30,6 +30,7 @@
 #   1.3.14 20220525  ZA Check if GIT_VERSION_TAG is null
 #   1.3.15 20230710  ZA Fix systemctl enable energi3
 #   1.3.16 20230817  ZA Get IP4 Address
+#   1.3.17 20230903  ZA Repo changed to go-energi
 #
 : '
 # Run the script to get started:
@@ -62,7 +63,7 @@ fi
 export DEBIAN_FRONTEND=noninteractive 
 
 # Locations of Repositories and Guide
-export API_URL=${API_URL:-"https://api.github.com/repos/energicryptocurrency/energi/releases/latest"}
+export API_URL=${API_URL:-"https://api.github.com/repos/energicryptocurrency/go-energi/releases/latest"}
 # Production
 export BASE_URL=${BASE_URL:-"raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts"}
 #==> For testing set environment variable

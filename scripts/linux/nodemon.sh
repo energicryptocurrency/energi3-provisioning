@@ -26,9 +26,10 @@
 #   1.3.0  20210208  ZAlam Update USRNAME & DATADIR; support all versions
 #   1.3.1  20211208  ZAlam Energi Core Node repo change
 #   1.3.5  20210101  ZAlam Exclude TTY executions & use correct ${ENERGI_EXEC} binary
+#   1.3.6  20230903  ZAlam Repo changed to go-energi
 #
 # Set script version
-NODEMONVER=1.3.5
+NODEMONVER=1.3.6
 
  : '
 # Run this file
@@ -71,7 +72,7 @@ NODEMONVER=1.3.5
  DISCORD_TITLE_LIMIT=266
  
  # NRG Parameters
- GITAPI_URL="https://api.github.com/repos/energicryptocurrency/energi/releases/latest"
+ GITAPI_URL="https://api.github.com/repos/energicryptocurrency/go-energi/releases/latest"
  
  # Set variables
  MNTOTALNRG=0
