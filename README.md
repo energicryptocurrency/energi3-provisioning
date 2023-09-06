@@ -1,5 +1,7 @@
 # energi3-provisioning
 
+## Scripts
+
 This repository has provisioning scripts as well as startup scrits for Energi Core Node
 
 - Linux / VPS <br>
@@ -23,3 +25,7 @@ This repository has provisioning scripts as well as startup scrits for Energi Co
 -- start_staking.sh               : Start Staking<br>
 -- start_mn.sh                    : Start Masternode<br>
 
+## SDK Configuration Files
+
+- hardhat                         : Hardhad config files
+- truffle                         : Truffle config files
