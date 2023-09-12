@@ -31,6 +31,7 @@
 #   1.3.15 20230710  ZA Fix systemctl enable energi3
 #   1.3.16 20230817  ZA Get IP4 Address
 #   1.3.17 20230903  ZA Repo changed to go-energi
+#   1.3.18 20230912  ZA Support Ubuntu 22.04 LTS
 #
 : '
 # Run the script to get started:
@@ -112,10 +113,10 @@ _os_arch () {
   OSVERSIONLONG=`grep ^VERSION_ID /etc/os-release | awk -F\" '{ print $2 }'`
   OSVERSION=`echo ${OSVERSIONLONG} | awk -F\. '{ print $1 }'`
   echo -n "${OSNAME} ${OSVERSIONLONG} is  "
-  if [ "${OSNAME}" = "Ubuntu" ] && [ ${OSVERSION} -ge 18 ]
+  if [ "${OSNAME}" = "Ubuntu" ] && [ ${OSVERSION} -ge 22 ]
   then
     echo "${GREEN}supported${NC}"
-  elif [ "${OSNAME}" = "Raspbian GNU/Linux" ]
+  elif [ "${OSNAME}" = "Debian GNU/Linux" ] && [ ${OSVERSION} -ge 12 ]
   then
     echo "${GREEN}supported${NC}"
   else
