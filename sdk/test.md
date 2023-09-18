@@ -1,28 +1,9 @@
-## title {.tabset .tabset-fade}
-content above tabbed region.
+## Quarterly Results {.tabset}
 
-### tab Social-Media
+### By Product
 
-tab content Social-Media
+(tab content)
 
-### tab Contact
+### By Region
 
-tab content  Contact
-
-### tab Revisions
-
-tab content  Revisions
-
-### tab Articles
-
-tab content  Articles
-
-### tab Skills
-
-tab content  Skills
-
-### tab Insights
-
-tab content  Insights
-
-content below tabbed region
+(tab content)
