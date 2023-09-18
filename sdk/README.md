@@ -30,18 +30,16 @@ Note that Energi Unit Maps, like `web3.utils.toWei('1', 'nrg')`, can only be use
 Run the following to install the extension:
 
 
-|    NPM   |   Yarn  |
-| -------- | ------- |
-|```bash title="NPM"
-npm install @energi/web3-ext
-```| some thing |
+|          NPM                 |            Yarn           |
+| ---------------------------- | ------------------------- |
+| npm install @energi/web3-ext | yarn add @energi/web3-ext |
 
 or
 
 **Yarn:**
 
 ```bash title="Yarn"
-yarn add @energi/web3-ext
+
 ```
 
 For details on the SDK visit [https://www.npmjs.com/package/@energi/web3-ext](https://www.npmjs.com/package/@energi/web3-ext)
