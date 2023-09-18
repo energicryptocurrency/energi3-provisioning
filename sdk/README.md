@@ -12,9 +12,11 @@ Here are guides on how you can launch your own core node and connect on either p
 - [Set up Linux VPS](https://wiki.energi.world/docs/guides/linux-vps)
 - [Install Core Node on Linux VPS](https://wiki.energi.world/docs/guides/scripted-linux-installation)
 
+
 ## 1. Install Extenstion
 
-title {.tabset .tabset-fade}
+Check out the [NPM Package site](https://www.npmjs.com/package/@energi) for details of the extensions noted below.
+
 ### 1.1. Energi Core Node
 
 #### 1.1.1. Energi Web3js extension
@@ -29,35 +31,18 @@ Note that Energi Unit Maps, like `web3.utils.toWei('1', 'nrg')`, can only be use
 
 Run the following to install the extension:
 
-
 |          NPM                 |            Yarn           |
 | ---------------------------- | ------------------------- |
 | npm install @energi/web3-ext | yarn add @energi/web3-ext |
-
-or
-
-**Yarn:**
-
-```bash title="Yarn"
-
-```
-
-For details on the SDK visit [https://www.npmjs.com/package/@energi/web3-ext](https://www.npmjs.com/package/@energi/web3-ext)
 
 
 #### 1.1.2. Energi SDK
 
 Add the library to the project by the following commands:
 
-```bash title="NPM"
-npm install @energi/energi-sdk
-```
-
-or
-
-```bash title="Yarn"
-yarn add @energi/energi-sdk
-```
+|            NPM                 |             Yarn            |
+| ------------------------------ | --------------------------- |
+| npm install @energi/energi-sdk | yarn add @energi/energi-sdk |
 
 
 ### 1.2. Energiswap
@@ -68,43 +53,37 @@ The Energiswap SDK is provided to help developers build on top of Energiswap. It
 
 Run the following to install the extension:
 
-**NPM:**
-
-```bash title="NPM"
-npm install @energi/energiswap-sdk
-```
-
-or
-
-**Yarn:**
-
-```bash title="Yarn"
-yarn add @energi/energiswap-sdk
-```
-
-For details on the SDK visit  [https://www.npmjs.com/package/@energi/energiswap-sdk](https://www.npmjs.com/package/@energi/energiswap-sdk)
+|               NPM                  |               Yarn              |
+| ---------------------------------- | ------------------------------- |
+| npm install @energi/energiswap-sdk | yarn add @energi/energiswap-sdk |
 
 
 #### 1.2.2. Smart contracts for Energiswap
 
-**NPM:**
+Energiswap is a decentralized protocol for automated token exchange. 
 
-```bash title="NPM"
-npm install @energi/energiswap-contracts
-```
+|                   NPM                    |                   Yarn                |
+| ---------------------------------------- | ------------------------------------- |
+| npm install @energi/energiswap-contracts | yarn add @energi/energiswap-contracts |
 
-#### 1.2.3. The Token Lists specification
 
-**NPM:**
+#### 1.2.3. The Token Lists Specification
 
-```bash title="NPM"
-npm install @energi/energiswap-token-lists
-```
+Energiswap Token Lists is a specification for lists of token metadata (e.g. address, decimals, ...) that can be used by any dApp interfaces that needs one or more lists of tokens.
+
+Anyone can create and maintain a token list, as long as they follow the specification.
+
+Specifically an instance of a token list is a JSON blob that contains a list of ERC20 token metadata for use in dApp user interfaces. Token list JSON must validate against the JSON schema in order to be used in the Energiswap Interface. Tokens on token lists, and token lists themselves, are tagged so that users can easily find tokens.
+
+|                   NPM                      |                   Yarn                  |
+| ------------------------------------------ | --------------------------------------- |
+| npm install @energi/energiswap-token-lists | yarn add @energi/energiswap-token-lists |
+
 
 #### 1.2.4. Energiswap Default Token List
 
-**NPM:**
+This NPM module contains the default token list for all dApss used in the Energi ecosystem. It also contains all SVG logo files.
 
-```bash title="NPM"
-npm install @energi/energiswap-default-token-list
-```
+|                      NPM                          |                      Yarn                      |
+| ------------------------------------------------- | ---------------------------------------------- |
+| npm install @energi/energiswap-default-token-list | yarn add @energi/energiswap-default-token-list |
