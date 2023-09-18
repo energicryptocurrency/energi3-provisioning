@@ -1,4 +1,4 @@
-## Quarterly Results {.tabset}
+## Quarterly Results {.tabset .tabset-fade .tabset-pills}
 
 ### By Product
 
