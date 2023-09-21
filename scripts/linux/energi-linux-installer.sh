@@ -32,6 +32,7 @@
 #   1.3.16 20230817  ZA Get IP4 Address
 #   1.3.17 20230903  ZA Repo changed to go-energi
 #   1.3.18 20230912  ZA Support Ubuntu 22.04 LTS
+#   1.3.19 20230921  ZA Support upgrade of version 3.x.x
 #
 : '
 # Run the script to get started:
@@ -767,7 +768,11 @@ _upgrade_energi () {
     echo "${RED}Cannot determine the version installed on the VPS."
     echo "${RED}Exiting installer.${NC}"
     exit 10
-  
+  else
+    # Check if INSTALL_VERSION is 3.x.y and replace it with 1.x.y
+    if [[ ${INSTALL_VERSION} == 3.* ]]; then
+      INSTALL_VERSION="1${INSTALL_VERSION:1}"
+    fi
   fi
   
   # Check if the version in Github requires removedb
