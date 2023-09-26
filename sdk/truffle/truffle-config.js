@@ -100,7 +100,7 @@ module.exports = {
     compilers: {
         solc: {
             version: '0.8.17',
-            evmVersion: 'shanghai',
+            evmVersion: 'istanbul',
             optimizer: {
                 enabled: true,
                 runs: 200
