@@ -30,7 +30,7 @@ module.exports = {
   solidity: {
     version: '0.8.17',
     settings: {
-      evmVersion: 'shanghai',
+      evmVersion: 'istanbul',
       optimizer: {
         enabled: true,
         runs: 200,
@@ -46,14 +46,14 @@ module.exports = {
     energiMainnet: {
       chainId: 39797,
       url: String(RPC_URL || "https://nodeapi.energi.network"),
-      gas: 30000000,
+      gas: 1000000,
       gasPrice: 20000000000, // 20 GWei
       accounts: [`0x${ACCOUNT_PRIVATE_KEY}`],
     },
     energiTestnet: {
       chainId: 49797,
       url: String(RPC_URL || "https://nodeapi.test.energi.network"),
-      gas: 30000000,
+      gas: 1000000,
       gasPrice: 20000000000, // 20 GWei
       accounts: [`0x${ACCOUNT_PRIVATE_KEY}`],
     },
