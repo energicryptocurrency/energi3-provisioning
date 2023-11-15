@@ -15,7 +15,7 @@ Here are guides on how you can launch your own core node and connect on either p
 
 ## 1. Install Extenstion
 
-Check out the [NPM Package site](https://www.npmjs.com/package/@energi) for details of the extensions noted below.
+Check out the [NPM Package site](https://www.npmjs.com/search?q=%40energi) for details of the extensions noted below.
 
 ### 1.1. Energi Core Node
 
