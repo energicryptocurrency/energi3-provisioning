@@ -1,0 +1,8 @@
+AuthorizedKeysFile ~/.sshd/authorized_keys
+ChallengeResponseAuthentication no
+HostKey ~/.sshd/host_dsa_key
+HostKey ~/.sshd/host_rsa_key
+PasswordAuthentication no
+PidFile ~/.sshd/sshd.pid
+Port 2222
+UsePAM yes

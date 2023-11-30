@@ -1,0 +1,32 @@
+version: '3.8'
+
+secrets:
+  account_address:
+    file: ./configuration/energi_account_address
+  account_password:
+    file: ./configuration/energi_account_password
+
+services:
+  core:
+    build:
+      args:
+        ENERGI_BIN: "${ENERGI_BIN}"
+        ENERGI_CORE_DIR: "${ENERGI_CORE_DIR:?}"
+        ENERGI_VERSION: ${ENERGI_VERSION:?"}
+        STAKER_HOME: ${STAKER_HOME:?}
+      context: .
+    image: energi-core-node:${ENERGI_VERSION}-0.0
+    ports:
+      - 39797:39797/tcp
+      - 39797:39797/udp
+    restart: unless-stopped
+    secrets:
+      - account_address
+      - account_password
+    volumes:
+      - target: "${ENERGI_CORE_DIR}"
+        type: volume
+        source: core-data
+
+volumes:
+  core-data:

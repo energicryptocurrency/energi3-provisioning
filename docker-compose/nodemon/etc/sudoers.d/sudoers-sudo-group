@@ -1,0 +1,3 @@
+%sudo ALL = (ALL:ALL) NOPASSWD:SETENV: /usr/bin/apt-get, /usr/bin/cat,\
+    /usr/bin/debsums, /usr/bin/mkdir, /usr/bin/rkhunter, /usr/bin/rm,\
+    /usr/bin/sqlite3, /usr/bin/sudo command, /usr/bin/tee, /usr/sbin/logrotate

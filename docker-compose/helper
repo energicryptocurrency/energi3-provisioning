@@ -1,0 +1,333 @@
+#!/bin/sh
+
+command_pattern_attach='attach'
+command_pattern_chaindata='bootstrap-chaindata | chaindata'
+service_choices='core | monitor'
+command_pattern_console="console | shell | terminal ${service_choices}"
+command_pattern_masternode="\
+masternode-enode-url | masternode-enode | mn-enode-url | mn-enode"
+command_pattern_preimages='apply-preimages | preimages'
+service_pattern="all | ${service_choices}"
+command_pattern_update="update [${service_pattern}] [<version>]"
+command_pattern_setup="setup [${service_pattern}]"
+command_pattern_start="start [${service_pattern}]"
+command_pattern_status='staking-status | status'
+env='.env'
+help_description='Print this help message'
+help_message="\
+helper - a helper command for \`energi-docker-compose\`, a dockerised
+Energi Core Node.
+
+Available commands:
+    ${command_pattern_preimages}
+        Apply Energi Core Node preimages
+    ${command_pattern_attach}
+        Attach to the Energi Core Node console
+    ${command_pattern_chaindata}
+        Bootstrap Energi Core Node chaindata
+    ${command_pattern_console}
+        Attach to Energi Core Node or Monitor container
+    help
+        ${help_description}
+    ${command_pattern_masternode}
+        Get Masternode enode URL to be used to announce Masternode
+    ${command_pattern_setup}
+        Setup Energi Core Node container(s)
+    ${command_pattern_start}
+        Start Energi Core Node container(s); this is a shortcut for
+        \`docker compose up --detach [${service_choices}]\`
+    ${command_pattern_status}
+        Energi Core Node synchronisation and staking status
+    ${command_pattern_update}
+        Update image(s) and recreate container(s).
+        Version argument (i.e. v1.1.4) can be used to build images and create
+        containers with Energi version other than the one that is specified in
+        \`${env}\`
+
+Available options:
+    -?, -h, --help
+        ${help_description}
+"
+service_arguments_message="Valid arguments are:
+  - no value or \`all\`;
+  - \`core\`;
+  - \`monitor\`."
+exec='docker compose exec'
+exec_core="${exec} core"
+exec_monitor="${exec} monitor"
+run='docker compose run --rm'
+stop='docker compose stop'
+up='docker compose up --detach'
+
+bootstrap_chaindata() {
+  ${run} --entrypoint '/bin/sh bootstrap-chaindata.sh' core
+}
+
+check_max_arguments_count() {
+  count=${1}
+  max=${2}
+  pattern=${3}
+
+  if [ "${count}" -gt "${max}" ]; then
+    printf '%s\n' 'Too much arguments!'
+
+    if [ -n "${pattern}" ] && [ "${pattern}" != '' ]; then
+      printf "Subcommand's pattern is: %s\n" "${pattern}"
+    fi
+
+    exit 1
+  fi
+}
+
+print_help_message() {
+  printf '%b' "\n${help_message}\n"
+}
+
+case "${1}" in
+'')
+  printf 'No command or option was provided!\n'
+  print_help_message
+
+  exit 1
+  ;;
+-\? | -h | --help | help)
+  check_max_arguments_count ${#} 1 '-? | -h | --help | help'
+  print_help_message
+
+  exit 0
+  ;;
+apply-preimages | preimages)
+  check_max_arguments_count ${#} 1 "${command_pattern_preimages}"
+  ${stop}
+  exit_code="${?}"
+  ${run} --entrypoint '/bin/sh apply-preimages.sh' core
+  exit_code=$((exit_code + ${?}))
+  ${up}
+  exit_code=$((exit_code + ${?}))
+
+  exit ${exit_code}
+  ;;
+attach)
+  check_max_arguments_count ${#} 1 "${command_pattern_attach}"
+  . ./.env
+  ${exec_core} "${ENERGI_BIN}" --datadir "${ENERGI_CORE_DIR}" attach
+
+  exit ${?}
+  ;;
+bootstrap-chaindata | chaindata)
+  check_max_arguments_count ${#} 1 "${command_pattern_chaindata}"
+  ${stop}
+  exit_code="${?}"
+  bootstrap_chaindata && ${up}
+  exit_code=$((exit_code + ${?}))
+
+  exit "${exit_code}"
+  ;;
+console | shell | terminal)
+  check_max_arguments_count ${#} 2 "${command_pattern_console}"
+
+  if [ -z "${2}" ] || [ "${2}" = '' ]; then
+    printf 'Service name (%s) is not provided!\n' "${service_choices}"
+
+    exit 1
+  fi
+
+  case "${2}" in
+  core)
+    ${exec_core} /bin/sh
+
+    exit ${?}
+    ;;
+  monitor)
+    ${exec_monitor} /bin/bash
+
+    exit ${?}
+    ;;
+  *)
+    printf "\`%s\` is not a valid service name!\n" "${2}"
+    printf 'Valid options are: %s.\n' "${service_choices}"
+
+    exit 1
+    ;;
+  esac
+  ;;
+masternode-enode-url | masternode-enode | mn-enode-url | mn-enode)
+  check_max_arguments_count ${#} 1 "${command_pattern_masternode}"
+  ${exec_core} sh energi-masternode-enode-url.sh
+
+  exit ${?}
+  ;;
+setup)
+  setup_monitor() {
+    ${run} --entrypoint='/bin/bash nodemon.sh' --user=root monitor
+  }
+
+  setup_core() {
+    ${run} \
+      --entrypoint '/bin/sh /setup/setup.sh' \
+      --user=root --volume="${PWD}/setup:/setup" \
+      core && bootstrap_chaindata
+  }
+
+  check_max_arguments_count ${#} 2 "${command_pattern_setup}"
+
+  case "${2}" in
+  '' | all)
+    setup_core && ${up} core && setup_monitor && ${up} monitor
+
+    exit ${?}
+    ;;
+  core)
+    setup_core && ${up} core
+
+    exit ${?}
+    ;;
+  monitor)
+    setup_monitor && ${up} monitor
+
+    exit ${?}
+    ;;
+  *)
+    printf "\`%s\` is not a valid argument for the subcommand \`setup\`.\n" \
+      "${2}"
+    printf '%s\n' "${service_arguments_message}"
+
+    exit 1
+    ;;
+  esac
+  ;;
+start)
+  check_max_arguments_count ${#} 2 "${command_pattern_start}"
+
+  case "${2}" in
+  '' | all)
+    ${up}
+
+    exit ${?}
+    ;;
+  core)
+    ${up} core
+
+    exit ${?}
+    ;;
+  monitor)
+    ${up} monitor
+
+    exit ${?}
+    ;;
+  *)
+    printf "\`%b\` is not a valid argument for the subcommand \`start\`.\n" \
+      "${2}"
+    printf '%b\n' "${service_arguments_message}"
+
+    exit 1
+    ;;
+  esac
+  ;;
+staking-status | status)
+  check_max_arguments_count ${#} 1 "${command_pattern_status}"
+  ${exec_core} sh energi-core-node-status.sh
+
+  exit ${?}
+  ;;
+update)
+  update_value_in_file() {
+    pattern_prefix="${1}"
+    pattern_value="${2}"
+    new_value="${3}"
+    target="${4}"
+    current_value="$(value_from_file \
+      "${pattern_prefix}" \
+      "${pattern_value}" \
+      "${target}")"
+
+    if [ "${new_value}" != "${current_value}" ] && [ -f "${target}" ]; then
+      printf "Current value \`%s\` differs from the provided one: \`%s\`.\n" \
+        "${current_value}" \
+        "${new_value}"
+      printf "Updating it in \`%s\`.\n" "${target}"
+      sed -i \
+        "s/^\(${pattern_prefix}\)${pattern_value}$/\1${new_value}/" \
+        "${target}"
+    fi
+  }
+
+  value_from_file() {
+    pattern_prefix="${1}"
+    pattern_value="${2}"
+    file="${3}"
+    sed -n "s/${pattern_prefix}\(${pattern_value}\)$/\1/p" "${file}"
+  }
+
+  case "${2}" in
+  all | core | monitor)
+    check_max_arguments_count ${#} 3 "${command_pattern_update}"
+    ;;
+  *) check_max_arguments_count ${#} 2 "${command_pattern_update}" ;;
+  esac
+
+  update="${up} --build"
+  command="${update}"
+  git pull
+
+  case "${2}" in
+  core) command="${update} core" ;;
+  monitor) command="${update} --no-deps monitor" ;;
+  esac
+
+  for last_argument in "${@}"; do :; done
+
+  if [ "${last_argument}" = 'update' ]; then
+    last_argument=''
+  fi
+
+  pattern_version_value='v[0-9]\+\.[0-9]\+\.[0-9]\+'
+  env_version="$(value_from_file \
+    '^ENERGI_VERSION=' \
+    "${pattern_version_value}" \
+    "${env}")"
+
+  case "${last_argument}" in
+  '' | all | core | monitor) version="${env_version}" ;;
+  *)
+    version=$(printf '%s' \
+      "${last_argument}" | grep "${pattern_version_value}")
+
+    if [ -z "${version}" ] || [ "${version}" = '' ]; then
+      printf 'Invalid version format!\n'
+      printf 'Version must be formatted like vX.Y.Z (for example: v1.1.4).\n'
+      printf 'Version provided: %s\n' "${last_argument}"
+
+      exit 1
+    elif [ "${version}" != "${env_version}" ]; then
+      export ENERGI_VERSION="${version}"
+    fi
+    ;;
+  esac
+
+  case "${last_argument}" in
+  '' | all | monitor)
+    pattern_monitor_image_prefix='^[[:space:]]*image: '
+    pattern_monitor_tag_value='.*'
+    update_value_in_file \
+      "${pattern_monitor_image_prefix}" \
+      "${pattern_monitor_tag_value}" \
+      "$(value_from_file \
+        "${pattern_monitor_image_prefix}" \
+        "${pattern_monitor_tag_value}" \
+        'compose.override.template.yaml')" \
+      'compose.override.yaml'
+    ;;
+  esac
+
+  ${command}
+
+  exit ${?}
+  ;;
+*)
+  printf "\`%s\` is not a valid subcommand!\n" "${1}"
+  print_help_message
+
+  exit 1
+  ;;
+esac

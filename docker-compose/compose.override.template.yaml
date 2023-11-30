@@ -1,0 +1,26 @@
+services:
+  monitor:
+    build:
+      args:
+        ENERGI_BIN: "${ENERGI_BIN}"
+        ENERGI_CORE_DIR: "${ENERGI_CORE_DIR}"
+        ENERGI_VERSION: ${ENERGI_VERSION}
+        STAKER_HOME: ${STAKER_HOME}
+      context: nodemon
+    depends_on:
+      - core
+    env_file: nodemon/.env
+    environment:
+      - TERM=xterm
+    image: energi-node-monitor:${ENERGI_VERSION}-1.3.5-0.0
+    restart: unless-stopped
+    volumes:
+      - target: "${ENERGI_CORE_DIR}"
+        type: volume
+        source: core-data
+      - monitor-data:/var/multi-masternode-data/nodebot
+      - monitor-logs:${STAKER_HOME}/log
+
+volumes:
+  monitor-data:
+  monitor-logs:

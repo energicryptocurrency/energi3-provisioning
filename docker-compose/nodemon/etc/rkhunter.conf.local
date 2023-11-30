@@ -1,0 +1,23 @@
+#
+# These two options determine which tests are to be performed. The ENABLE_TESTS
+# option can use the word 'ALL' to refer to all of the available tests. The
+# DISABLE_TESTS option can use the word 'NONE' to mean that no tests are
+# disabled. The list of disabled tests is applied to the list of enabled tests.
+#
+# Both options are space-separated lists of test names, and both options may
+# be specified more than once. The currently available test names can be seen
+# by using the command 'rkhunter --list tests'.
+#
+# The supplied configuration file has some tests already disabled, and these
+# are tests that will be used only occasionally, can be considered 'advanced'
+# or that are prone to produce more than the average number of false-positives.
+#
+# Please read the README file for more details about enabling and disabling
+# tests, the test names, and how rkhunter behaves when these options are used.
+#
+# The default values are to enable all tests and to disable none. However, if
+# either of the options below are specified, then they will override the
+# program defaults.
+#
+#+ `os_specific` and `system_configs_syslog` were added to the default list
+DISABLE_TESTS=apps deleted_files hidden_ports hidden_procs os_specific packet_cap_apps suspscan system_configs_syslog
