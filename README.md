@@ -29,3 +29,7 @@ This repository has provisioning scripts as well as startup scrits for Energi Co
 
 - hardhat                         : Hardhad config files
 - truffle                         : Truffle config files
+
+## Energi Docker Compose
+
+Files in `docker-compose` are meant to be used to spin up a Docker environment to run Energi Core node. It is monitored via `nodemon` which can send alerts to Discord and/or Telegram.
