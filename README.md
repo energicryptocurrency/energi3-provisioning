@@ -25,6 +25,19 @@ This repository has provisioning scripts as well as startup scrits for Energi Co
 -- start_staking.sh               : Start Staking<br>
 -- start_mn.sh                    : Start Masternode<br>
 
+## Add Peers
+If you are having issues with low peer nodes, do the following.
+
+Login to VPS and attach to core node:
+
+```
+energi3 attach
+```
+
+Goto https://github.com/energicryptocurrency/energi3-provisioning/blob/master/scripts/linux/bootnodes-mainnet.txt and copy the content.
+
+Paste the content to core node console.
+
 ## SDK Configuration Files
 
 - hardhat                         : Hardhad config files
