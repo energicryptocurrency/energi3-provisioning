@@ -30,8 +30,8 @@ If you are having issues with low peer nodes, do the following.
 
 - 1. If you are running your core on a Linux VPS, [login to the VPS](https://wiki.energi.world/docs/guides/scripted-linux-installation#2---login-to-your-vps)
 - 2. Attach to core node
-  - 2.1. Linux / Mac: Run `energi3 attach`
-  - 2.2. Windows: Start [Attach](https://wiki.energi.world/docs/guides/core-node-windows#2---start-core-node--attach)
+  - Linux / Mac: Run `energi3 attach`
+  - Windows: Start [Attach](https://wiki.energi.world/docs/guides/core-node-windows#2---start-core-node--attach)
 
 - 3. Goto [list of bootnode](./scripts/linux/bootnodes-mainnet.txt) and copy the content.
 
