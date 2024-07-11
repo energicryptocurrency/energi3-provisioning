@@ -28,15 +28,20 @@ This repository has provisioning scripts as well as startup scrits for Energi Co
 ## Add Peers
 If you are having issues with low peer nodes, do the following.
 
-Login to VPS and attach to core node:
+- 1. If you are running your core on a Linux VPS, [login to the VPS](https://wiki.energi.world/docs/guides/scripted-linux-installation#2---login-to-your-vps)
+- 2. Attach to core node
+  - 2.1. Linux / Mac: Run the following command after you login to the VPS
 
 ```
 energi3 attach
 ```
 
-Goto https://github.com/energicryptocurrency/energi3-provisioning/blob/master/scripts/linux/bootnodes-mainnet.txt and copy the content.
+  - 2.2. Windows: Start [Attach](https://wiki.energi.world/docs/guides/core-node-windows#2---start-core-node--attach)
 
-Paste the content to core node console.
+
+- 3. Goto https://github.com/energicryptocurrency/energi3-provisioning/blob/master/scripts/linux/bootnodes-mainnet.txt and copy the content.
+
+- 4. Paste the content to core node console.
 
 ## SDK Configuration Files
 
