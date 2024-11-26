@@ -33,6 +33,7 @@
 #   1.3.17 20230903  ZA Repo changed to go-energi
 #   1.3.18 20230912  ZA Support Ubuntu 22.04 LTS
 #   1.3.19 20230921  ZA Support upgrade of version 3.x.x
+#   1.4.0  20241126  ZA Remove packages
 #
 : '
 # Run the script to get started:
@@ -525,34 +526,17 @@ UBUNTU_SECURITY_PACKAGES
   fi
   
   # Install missing programs if needed.
-  if [ ! -x "$( command -v aria2c )" ]
+  if [ ! -x "$( command -v net-tools )" ]
   then
     echo "    Installing missing programs..."
     ${SUDO} apt-get install -yq \
       curl \
       lsof \
       util-linux \
-      gzip \
-      unzip \
-      procps \
       htop \
       gpw \
       bc \
-      pv \
-      sysstat \
-      glances \
-      at \
-      subnetcalc \
-      net-tools \
-      sipcalc \
-      python-yaml \
-      html-xml-utils \
-      apparmor \
-      ack-grep \
-      pcregrep \
-      snapd \
-      aria2 \
-      dbus-user-session 2> /dev/null
+      net-tools 2> /dev/null
   fi
   
   if [ ! -x "$( command -v jq )" ]
@@ -560,8 +544,6 @@ UBUNTU_SECURITY_PACKAGES
     echo "    Installing jq"
     ${SUDO} apt-get install -yq jq 2> /dev/null
   fi
-  echo "    Installing nodejs"
-  ${SUDO} apt-get install -yq nodejs 2> /dev/null
   
   echo "    Removing apt files not required"
   ${SUDO} apt autoremove -y 2> /dev/null
